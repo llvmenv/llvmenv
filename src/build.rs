@@ -1,13 +1,13 @@
 use std::collections::HashMap;
-use std::io::{Read, Write};
-use std::path::PathBuf;
-use std::{env, fs};
+use std::fs;
+use std::io::Read;
 use toml;
 
 use config::*;
+use error::Result;
 
 #[derive(Deserialize, Debug)]
-struct MakeOption {
+pub struct MakeOption {
     subdir: Option<String>,
     build_path: Option<String>,
     target: Option<Vec<String>>,
@@ -16,7 +16,7 @@ struct MakeOption {
 }
 
 #[derive(Deserialize, Debug)]
-struct Entry {
+pub struct Entry {
     git: String,
     option: Option<MakeOption>,
 }
@@ -29,4 +29,9 @@ pub fn entries() -> Result<Entries> {
     let mut s = String::new();
     f.read_to_string(&mut s)?;
     Ok(toml::from_str(&s)?)
+}
+
+/// Download Git repository using `git clone`
+fn download(name: &str, entry: &Entry) -> Result<()> {
+    Ok(())
 }

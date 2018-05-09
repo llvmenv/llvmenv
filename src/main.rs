@@ -7,10 +7,10 @@ extern crate log;
 
 mod build;
 mod config;
+mod error;
 
+use build::*;
 use config::*;
-
-type Result<T> = ::std::result::Result<T, Box<::std::error::Error>>;
 
 fn main() {
     init_config().expect("Failed to init...");

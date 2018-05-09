@@ -1,8 +1,8 @@
-use std::io::{Read, Write};
+use std::io::Write;
 use std::path::PathBuf;
 use std::{env, fs};
 
-use super::*;
+use error::Result;
 
 pub const APP_NAME: &'static str = "llvmenv";
 pub const ENTRY_TOML: &'static str = "entry.toml";
