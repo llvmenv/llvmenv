@@ -9,19 +9,46 @@ extern crate log;
 #[macro_use]
 extern crate failure;
 extern crate itertools;
+#[macro_use]
+extern crate structopt;
 
 mod build;
 mod config;
 mod error;
 
-use config::*;
+use structopt::StructOpt;
+
+#[derive(StructOpt, Debug)]
+#[structopt(
+    name = "llvmenv",
+    about = "Manage multi LLVM builds",
+    raw(setting = "structopt::clap::AppSettings::ColoredHelp")
+)]
+enum LLVMEnv {
+    #[structopt(name = "init", about = "Initialize llvmenv")]
+    Init {},
+    #[structopt(name = "list", about = "List usable builds")]
+    List {},
+    #[structopt(name = "prefix", about = "Show the prefix of the current build")]
+    Prefix { name: String },
+    #[structopt(name = "global", about = "Set the build to use (global)")]
+    Global { name: String },
+    #[structopt(name = "local", about = "Set the build to use (local)")]
+    Local { name: String },
+}
 
 fn main() {
-    init_config().expect("Initialization failed");
-    let entries = load_entries().unwrap();
-    for entry in entries.iter() {
-        entry.clone().unwrap();
-        entry.fetch().unwrap();
-        entry.prebuild().unwrap();
+    let opt = LLVMEnv::from_args();
+    match opt {
+        LLVMEnv::Init {} => config::init_config().expect("Failed to initailzie"),
+        LLVMEnv::List {} => {
+            let entries = config::load_entries().expect("Failed to load entries");
+            for entry in &entries {
+                println!("{}", entry.get_name());
+            }
+        }
+        _ => {
+            unimplemented!("opt = {:?}", opt);
+        }
     }
 }
