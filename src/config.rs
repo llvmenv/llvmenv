@@ -9,7 +9,8 @@ pub const ENTRY_TOML: &'static str = "entry.toml";
 
 const DEFAULT_ENTRY: &'static [u8] = br#"
 [llvm-dev]
-git = "https://github.com/llvm-mirror/llvm"
+llvm_git = "https://github.com/llvm-mirror/llvm"
+clang_git = "https://github.com/llvm-mirror/clang"
 
 [llvm-dev.option]
 target   = ["X86"]

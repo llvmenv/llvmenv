@@ -17,8 +17,9 @@ use config::*;
 
 fn main() {
     init_config().expect("Initialization failed");
-    let entries = load_entries().expect(&format!("Failed to load {}", ENTRY_TOML));
+    let entries = load_entries().unwrap();
     for entry in entries.iter() {
+        entry.clone().unwrap();
         entry.fetch().unwrap();
         entry.prebuild().unwrap();
     }
