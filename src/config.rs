@@ -80,7 +80,7 @@ struct EntryParam {
 }
 
 #[derive(Debug, Fail)]
-enum ParseError {
+pub enum ParseError {
     #[fail(display = "Duplicate LLVM in entry '{}': svn={}, git={}", name, svn, git)]
     DuplicateLLVM {
         name: String,

@@ -13,9 +13,9 @@ extern crate itertools;
 extern crate structopt;
 extern crate num_cpus;
 
-mod build;
-mod config;
-mod error;
+pub mod build;
+pub mod config;
+pub mod error;
 
 use structopt::StructOpt;
 
