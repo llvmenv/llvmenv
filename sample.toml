@@ -1,7 +1,0 @@
-[llvm-dev]
-git = "https://github.com/llvm-mirror/llvm"
-
-[llvm-dev.option]
-target   = ["X86"]
-example  = false
-document = false

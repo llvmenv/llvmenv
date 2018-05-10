@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["Toshiki Teramura <toshiki.teramura@gmail.com>"]
 
 [dependencies]
+log = "*"
 toml = "*"
 serde = "1"
 serde_derive = "1"
