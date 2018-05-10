@@ -11,6 +11,7 @@ extern crate failure;
 extern crate itertools;
 #[macro_use]
 extern crate structopt;
+extern crate num_cpus;
 
 mod build;
 mod config;

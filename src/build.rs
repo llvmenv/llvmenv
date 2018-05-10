@@ -151,6 +151,7 @@ impl Entry {
             .check_run()?;
 
         process::Command::new("make")
+            .arg(format!("-j{}", ::num_cpus::get()))
             .current_dir(&build)
             .check_run()?;
 
