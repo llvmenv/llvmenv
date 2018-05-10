@@ -4,6 +4,8 @@ extern crate serde_derive;
 extern crate toml;
 #[macro_use]
 extern crate log;
+#[macro_use]
+extern crate failure;
 
 mod build;
 mod config;
@@ -13,7 +15,9 @@ use build::*;
 use config::*;
 
 fn main() {
-    init_config().expect("Failed to init...");
-    let e = entries().expect(&format!("Failed to load {}", ENTRY_TOML));
-    println!("entries = {:?}", e);
+    init_config().expect("Initialization failed");
+    let entries = load_entries().expect(&format!("Failed to load {}", ENTRY_TOML));
+    for entry in entries.iter() {
+        entry.fetch().unwrap();
+    }
 }

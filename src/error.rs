@@ -1,1 +1,36 @@
+use std::process;
+
 pub type Result<T> = ::std::result::Result<T, Box<::std::error::Error>>;
+pub type CommandResult = ::std::result::Result<(), CommandError>;
+
+#[derive(Debug, Fail)]
+pub enum CommandError {
+    #[fail(display = "Exit with error-code({}): {}", errno, cmd)]
+    ErrorCode { errno: i32, cmd: String },
+    #[fail(display = "Launch failed: {}", cmd)]
+    LaunchFailed { cmd: String },
+    #[fail(display = "Terminated by signal: {}", cmd)]
+    TerminatedBySignal { cmd: String },
+}
+
+pub trait CheckRun {
+    fn check_run(&mut self) -> CommandResult;
+}
+
+impl CheckRun for process::Command {
+    fn check_run(&mut self) -> CommandResult {
+        let cmd = format!("{:?}", self);
+        let st = self.status()
+            .map_err(|_| CommandError::LaunchFailed { cmd: cmd.clone() })?;
+        match st.code() {
+            Some(errno) => {
+                if errno != 0 {
+                    Err(CommandError::ErrorCode { errno, cmd })
+                } else {
+                    Ok(())
+                }
+            }
+            None => Err(CommandError::TerminatedBySignal { cmd }),
+        }
+    }
+}

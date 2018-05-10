@@ -6,5 +6,6 @@ authors = ["Toshiki Teramura <toshiki.teramura@gmail.com>"]
 [dependencies]
 log = "*"
 toml = "*"
+failure = "*"
 serde = "1"
 serde_derive = "1"
