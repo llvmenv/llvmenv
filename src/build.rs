@@ -89,6 +89,28 @@ impl Entry {
     }
 
     pub fn fetch(&self) -> Result<()> {
+        match self.llvm {
+            LLVM::SVN(_) => process::Command::new("svn")
+                .arg("update")
+                .current_dir(self.src_dir())
+                .check_run()?,
+            LLVM::Git(_) => process::Command::new("git")
+                .arg("pull")
+                .current_dir(self.src_dir())
+                .check_run()?,
+        };
+        let clang = self.src_dir().join("tools").join("clang");
+        match self.clang {
+            Clang::SVN(_) => process::Command::new("svn")
+                .arg("update")
+                .current_dir(clang)
+                .check_run()?,
+            Clang::Git(_) => process::Command::new("git")
+                .arg("pull")
+                .current_dir(clang)
+                .check_run()?,
+            Clang::None => {}
+        };
         Ok(())
     }
 
