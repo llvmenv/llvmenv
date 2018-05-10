@@ -3,6 +3,8 @@ extern crate serde;
 extern crate serde_derive;
 extern crate toml;
 #[macro_use]
+extern crate derive_new;
+#[macro_use]
 extern crate log;
 #[macro_use]
 extern crate failure;
@@ -12,7 +14,6 @@ mod build;
 mod config;
 mod error;
 
-use build::*;
 use config::*;
 
 fn main() {

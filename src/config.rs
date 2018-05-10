@@ -1,7 +1,11 @@
+use std::collections::HashMap;
+use std::io::Read;
 use std::io::Write;
 use std::path::PathBuf;
 use std::{env, fs};
+use toml;
 
+use build::*;
 use error::Result;
 
 pub const APP_NAME: &'static str = "llvmenv";
@@ -63,4 +67,75 @@ pub fn init_config() -> Result<()> {
         f.write(DEFAULT_ENTRY)?;
     }
     Ok(())
+}
+
+#[derive(Deserialize, Debug)]
+struct EntryParam {
+    llvm_git: Option<String>,
+    llvm_svn: Option<String>,
+    clang_git: Option<String>,
+    clang_svn: Option<String>,
+    option: Option<BuildOption>,
+}
+
+#[derive(Debug, Fail)]
+enum ParseError {
+    #[fail(display = "Duplicate LLVM in entry '{}': svn={}, git={}", name, svn, git)]
+    DuplicateLLVM {
+        name: String,
+        svn: String,
+        git: String,
+    },
+    #[fail(display = "No LLVM in entry '{}'", name)]
+    NoLLVM { name: String },
+    #[fail(display = "Duplicate Clang in entry '{}': svn={}, git={}", name, svn, git)]
+    DuplicateClang {
+        name: String,
+        svn: String,
+        git: String,
+    },
+}
+
+type TOMLData = HashMap<String, EntryParam>;
+
+pub fn load_entries() -> Result<Vec<Entry>> {
+    let toml = config_dir().join(ENTRY_TOML);
+    let mut f = fs::File::open(toml)?;
+    let mut s = String::new();
+    f.read_to_string(&mut s)?;
+    let data: TOMLData = toml::from_str(&s)?;
+    let mut entries = Vec::new();
+    for (k, v) in data.into_iter() {
+        let name = k.into();
+        let llvm = if let Some(svn) = v.llvm_svn {
+            if let Some(git) = v.llvm_git {
+                return Err(ParseError::DuplicateLLVM { name, svn, git }.into());
+            } else {
+                LLVM::SVN(svn)
+            }
+        } else {
+            if let Some(git) = v.llvm_git {
+                LLVM::Git(git)
+            } else {
+                return Err(ParseError::NoLLVM { name }.into());
+            }
+        };
+
+        let clang = if let Some(svn) = v.clang_svn {
+            if let Some(git) = v.clang_git {
+                return Err(ParseError::DuplicateClang { name, svn, git }.into());
+            } else {
+                Clang::SVN(svn)
+            }
+        } else {
+            if let Some(git) = v.clang_git {
+                Clang::Git(git)
+            } else {
+                Clang::None
+            }
+        };
+
+        entries.push(Entry::new(name, llvm, clang, v.option));
+    }
+    Ok(entries)
 }

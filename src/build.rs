@@ -1,14 +1,11 @@
 use itertools::Itertools;
-use std::collections::HashMap;
-use std::io::Read;
 use std::path::PathBuf;
 use std::{fs, process};
-use toml;
 
 use config::*;
 use error::*;
 
-#[derive(Debug)]
+#[derive(Debug, new)]
 pub struct Entry {
     name: String,
     llvm: LLVM,
@@ -16,16 +13,25 @@ pub struct Entry {
     option: Option<BuildOption>,
 }
 
-type URL = String;
+#[derive(Deserialize, Debug)]
+pub struct BuildOption {
+    subdir: Option<String>,
+    build_path: Option<String>,
+    target: Option<Vec<String>>,
+    example: Option<bool>,
+    document: Option<bool>,
+}
+
+pub type URL = String;
 
 #[derive(Debug)]
-enum LLVM {
+pub enum LLVM {
     SVN(URL),
     Git(URL),
 }
 
 #[derive(Debug)]
-enum Clang {
+pub enum Clang {
     SVN(URL),
     Git(URL),
     None,
@@ -122,89 +128,4 @@ impl Entry {
             .check_run()?;
         Ok(())
     }
-}
-
-#[derive(Deserialize, Debug)]
-struct BuildOption {
-    subdir: Option<String>,
-    build_path: Option<String>,
-    target: Option<Vec<String>>,
-    example: Option<bool>,
-    document: Option<bool>,
-}
-
-#[derive(Deserialize, Debug)]
-struct EntryParam {
-    llvm_git: Option<String>,
-    llvm_svn: Option<String>,
-    clang_git: Option<String>,
-    clang_svn: Option<String>,
-    option: Option<BuildOption>,
-}
-
-#[derive(Debug, Fail)]
-enum ParseError {
-    #[fail(display = "Duplicate LLVM in entry '{}': svn={}, git={}", name, svn, git)]
-    DuplicateLLVM {
-        name: String,
-        svn: String,
-        git: String,
-    },
-    #[fail(display = "No LLVM in entry '{}'", name)]
-    NoLLVM { name: String },
-    #[fail(display = "Duplicate Clang in entry '{}': svn={}, git={}", name, svn, git)]
-    DuplicateClang {
-        name: String,
-        svn: String,
-        git: String,
-    },
-}
-
-type TOMLData = HashMap<String, EntryParam>;
-
-pub fn load_entries() -> Result<Vec<Entry>> {
-    let toml = config_dir().join(ENTRY_TOML);
-    let mut f = fs::File::open(toml)?;
-    let mut s = String::new();
-    f.read_to_string(&mut s)?;
-    let data: TOMLData = toml::from_str(&s)?;
-    let mut entries = Vec::new();
-    for (k, v) in data.into_iter() {
-        let name = k.into();
-        let llvm = if let Some(svn) = v.llvm_svn {
-            if let Some(git) = v.llvm_git {
-                return Err(ParseError::DuplicateLLVM { name, svn, git }.into());
-            } else {
-                LLVM::SVN(svn)
-            }
-        } else {
-            if let Some(git) = v.llvm_git {
-                LLVM::Git(git)
-            } else {
-                return Err(ParseError::NoLLVM { name }.into());
-            }
-        };
-
-        let clang = if let Some(svn) = v.clang_svn {
-            if let Some(git) = v.clang_git {
-                return Err(ParseError::DuplicateClang { name, svn, git }.into());
-            } else {
-                Clang::SVN(svn)
-            }
-        } else {
-            if let Some(git) = v.clang_git {
-                Clang::Git(git)
-            } else {
-                Clang::None
-            }
-        };
-
-        entries.push(Entry {
-            name,
-            llvm,
-            clang,
-            option: v.option,
-        });
-    }
-    Ok(entries)
 }
