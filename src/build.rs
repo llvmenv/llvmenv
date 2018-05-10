@@ -51,6 +51,9 @@ impl Entry {
     }
 
     pub fn clone(&self) -> Result<()> {
+        if !cache_dir().exists() {
+            fs::create_dir_all(cache_dir())?;
+        }
         let src = self.src_dir();
         if !src.exists() {
             match self.llvm {
