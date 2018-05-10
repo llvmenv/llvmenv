@@ -6,6 +6,7 @@ extern crate toml;
 extern crate log;
 #[macro_use]
 extern crate failure;
+extern crate itertools;
 
 mod build;
 mod config;
@@ -19,5 +20,6 @@ fn main() {
     let entries = load_entries().expect(&format!("Failed to load {}", ENTRY_TOML));
     for entry in entries.iter() {
         entry.fetch().unwrap();
+        entry.prebuild().unwrap();
     }
 }

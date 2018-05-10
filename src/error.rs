@@ -1,6 +1,7 @@
+use failure::Error;
 use std::process;
 
-pub type Result<T> = ::std::result::Result<T, Box<::std::error::Error>>;
+pub type Result<T> = ::std::result::Result<T, Error>;
 pub type CommandResult = ::std::result::Result<(), CommandError>;
 
 #[derive(Debug, Fail)]

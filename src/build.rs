@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use std::collections::HashMap;
 use std::io::Read;
 use std::path::PathBuf;
@@ -27,7 +28,7 @@ impl Entry {
         data_dir().join(&self.name)
     }
 
-    pub fn fetch(&self) -> CommandResult {
+    pub fn fetch(&self) -> Result<()> {
         let src = self.src_dir();
         if !src.exists() {
             process::Command::new("git")
@@ -35,12 +36,45 @@ impl Entry {
                 .arg(src)
                 .check_run()?;
         }
-        process::Command::new("git").arg("pull").check_run()
+        process::Command::new("git").arg("pull").check_run()?;
+        Ok(())
     }
 
     // Prepare build (create dir, run cmake)
-    pub fn prebuild(&self) {
-        //
+    pub fn prebuild(&self) -> Result<()> {
+        let build = self.build_dir();
+        if !build.exists() {
+            fs::create_dir_all(&build)?;
+        }
+        let mut opts = Vec::new();
+        opts.push(format!(
+            "-DCMAKE_INSTALL_PREFIX={}",
+            self.prefix().display()
+        ));
+        if let Some(ref option) = self.option {
+            if let Some(ref target) = option.target {
+                opts.push(format!(
+                    "-DLLVM_TARGETS_TO_BUILD={}",
+                    target.iter().join(";")
+                ));
+            }
+            if let Some(ref example) = option.example {
+                let ex = if *example { 1 } else { 0 };
+                opts.push(format!("-DLLVM_INCLUDE_EXAMPLES={}", ex));
+                opts.push(format!("-DCLANG_INCLUDE_EXAMPLES={}", ex));
+            }
+            if let Some(ref document) = option.example {
+                let ex = if *document { 1 } else { 0 };
+                opts.push(format!("-DLLVM_INCLUDE_DOCS={}", ex));
+                opts.push(format!("-DCLANG_INCLUDE_DOCS={}", ex));
+            }
+        }
+        process::Command::new("cmake")
+            .args(&opts)
+            .arg(self.src_dir())
+            .current_dir(build)
+            .check_run()?;
+        Ok(())
     }
 }
 
