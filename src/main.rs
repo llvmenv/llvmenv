@@ -31,6 +31,8 @@ enum LLVMEnv {
     List {},
     #[structopt(name = "prefix", about = "Show the prefix of the current build")]
     Prefix { name: String },
+    #[structopt(name = "build", about = "Build LLVM/Clang")]
+    Build { name: String },
     #[structopt(name = "global", about = "Set the build to use (global)")]
     Global { name: String },
     #[structopt(name = "local", about = "Set the build to use (local)")]
@@ -46,6 +48,11 @@ fn main() {
             for entry in &entries {
                 println!("{}", entry.get_name());
             }
+        }
+        LLVMEnv::Build { name } => {
+            let entry = config::load_entry(&name).expect("Failed to load entries");
+            entry.checkout().unwrap();
+            entry.build().unwrap();
         }
         _ => {
             unimplemented!("opt = {:?}", opt);

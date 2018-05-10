@@ -46,16 +46,21 @@ impl Entry {
         self.src_dir().join("build")
     }
 
-    fn prefix(&self) -> PathBuf {
+    pub fn prefix(&self) -> PathBuf {
         data_dir().join(&self.name)
     }
 
-    pub fn clone(&self) -> Result<()> {
+    pub fn get_name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn checkout(&self) -> Result<()> {
         if !cache_dir().exists() {
             fs::create_dir_all(cache_dir())?;
         }
         let src = self.src_dir();
         if !src.exists() {
+            // clone/checkout
             match self.llvm {
                 LLVM::SVN(ref url) => process::Command::new("svn")
                     .args(&["co", url.as_str()])
@@ -69,7 +74,17 @@ impl Entry {
                     .check_run()?,
             }
         } else {
-            warn!("Already exists: {}", src.display());
+            // fetch/update
+            match self.llvm {
+                LLVM::SVN(_) => process::Command::new("svn")
+                    .arg("update")
+                    .current_dir(self.src_dir())
+                    .check_run()?,
+                LLVM::Git(_) => process::Command::new("git")
+                    .arg("pull")
+                    .current_dir(self.src_dir())
+                    .check_run()?,
+            };
         }
         let tools = src.join("tools");
         let clang = tools.join("clang");
@@ -86,39 +101,22 @@ impl Entry {
                 Clang::None => info!("No clang."),
             }
         } else {
-            warn!("Already exists: {}", self.src_dir().display());
+            match self.clang {
+                Clang::SVN(_) => process::Command::new("svn")
+                    .arg("update")
+                    .current_dir(clang)
+                    .check_run()?,
+                Clang::Git(_) => process::Command::new("git")
+                    .arg("pull")
+                    .current_dir(clang)
+                    .check_run()?,
+                Clang::None => {}
+            };
         }
         Ok(())
     }
 
-    pub fn fetch(&self) -> Result<()> {
-        match self.llvm {
-            LLVM::SVN(_) => process::Command::new("svn")
-                .arg("update")
-                .current_dir(self.src_dir())
-                .check_run()?,
-            LLVM::Git(_) => process::Command::new("git")
-                .arg("pull")
-                .current_dir(self.src_dir())
-                .check_run()?,
-        };
-        let clang = self.src_dir().join("tools").join("clang");
-        match self.clang {
-            Clang::SVN(_) => process::Command::new("svn")
-                .arg("update")
-                .current_dir(clang)
-                .check_run()?,
-            Clang::Git(_) => process::Command::new("git")
-                .arg("pull")
-                .current_dir(clang)
-                .check_run()?,
-            Clang::None => {}
-        };
-        Ok(())
-    }
-
-    // Prepare build (create dir, run cmake)
-    pub fn prebuild(&self) -> Result<()> {
+    pub fn build(&self) -> Result<()> {
         let build = self.build_dir();
         if !build.exists() {
             fs::create_dir_all(&build)?;
@@ -149,7 +147,16 @@ impl Entry {
         process::Command::new("cmake")
             .args(&opts)
             .arg(self.src_dir())
-            .current_dir(build)
+            .current_dir(&build)
+            .check_run()?;
+
+        process::Command::new("make")
+            .current_dir(&build)
+            .check_run()?;
+
+        process::Command::new("make")
+            .arg("install")
+            .current_dir(&build)
             .check_run()?;
         Ok(())
     }
