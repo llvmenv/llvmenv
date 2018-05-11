@@ -3,6 +3,14 @@ name = "llvmenv"
 version = "0.1.0"
 authors = ["Toshiki Teramura <toshiki.teramura@gmail.com>"]
 
+description   = "Manage LLVM/Clang builds"
+documentation = "https://docs.rs/llvmenv"
+repository    = "https://github.com/termoshtt/llvmenv"
+keywords      = ["env", "llvm", "clang"]
+license       = "MIT"
+readme        = "README.md"
+categories    = []
+
 [dependencies]
 derive-new = "0.5"
 env_logger = "0.5"
