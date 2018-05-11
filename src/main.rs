@@ -24,7 +24,7 @@ use structopt::StructOpt;
 #[derive(StructOpt, Debug)]
 #[structopt(
     name = "llvmenv",
-    about = "Manage multi LLVM builds",
+    about = "Manage multiple LLVM/Clang builds",
     raw(setting = "structopt::clap::AppSettings::ColoredHelp")
 )]
 enum LLVMEnv {
