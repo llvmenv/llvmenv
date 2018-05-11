@@ -11,6 +11,7 @@ extern crate failure;
 extern crate itertools;
 #[macro_use]
 extern crate structopt;
+extern crate env_logger;
 extern crate glob;
 extern crate num_cpus;
 
@@ -19,9 +20,9 @@ pub mod config;
 pub mod entry;
 pub mod error;
 
-use failure::err_msg;
 use std::env;
 use std::path::PathBuf;
+use std::process::exit;
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
@@ -47,7 +48,10 @@ enum LLVMEnv {
     },
 
     #[structopt(name = "prefix", about = "Show the prefix of the current build")]
-    Prefix {},
+    Prefix {
+        #[structopt(short = "v", long = "verbose")]
+        verbose: bool,
+    },
 
     #[structopt(name = "global", about = "Set the build to use (global)")]
     Global { name: String },
@@ -60,6 +64,7 @@ enum LLVMEnv {
 }
 
 fn main() -> error::Result<()> {
+    env_logger::init();
     let opt = LLVMEnv::from_args();
     match opt {
         LLVMEnv::Init {} => config::init_config()?,
@@ -84,11 +89,13 @@ fn main() -> error::Result<()> {
             entry.build(nproc).unwrap();
         }
 
-        LLVMEnv::Prefix {} => {
+        LLVMEnv::Prefix { verbose } => {
             let build = build::seek_build()?;
             println!("{}", build.prefix().display());
-            if let Some(env) = build.env_path() {
-                info!("Set by {}", env.display());
+            if verbose {
+                if let Some(env) = build.env_path() {
+                    eprintln!("set by {}", env.display());
+                }
             }
         }
 
@@ -97,7 +104,8 @@ fn main() -> error::Result<()> {
             if build.exists() {
                 build.set_global()?;
             } else {
-                return Err(err_msg(format!("Build '{}' does not exists", name)));
+                eprintln!("Build '{}' does not exists", name);
+                exit(1);
             }
         }
         LLVMEnv::Local { name, path } => {
@@ -106,7 +114,8 @@ fn main() -> error::Result<()> {
             if build.exists() {
                 build.set_local(&path)?;
             } else {
-                return Err(err_msg(format!("Build '{}' does not exists", name)));
+                eprintln!("Build '{}' does not exists", name);
+                exit(1);
             }
         }
     }
