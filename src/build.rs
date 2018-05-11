@@ -116,7 +116,7 @@ impl Entry {
         Ok(())
     }
 
-    pub fn build(&self) -> Result<()> {
+    pub fn build(&self, nproc: usize) -> Result<()> {
         let build = self.build_dir();
         if !build.exists() {
             fs::create_dir_all(&build)?;
@@ -151,7 +151,7 @@ impl Entry {
             .check_run()?;
 
         process::Command::new("make")
-            .arg(format!("-j{}", ::num_cpus::get()))
+            .arg(format!("-j{}", nproc))
             .current_dir(&build)
             .check_run()?;
 
