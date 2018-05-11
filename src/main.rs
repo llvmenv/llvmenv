@@ -44,40 +44,49 @@ enum LLVMEnv {
     },
 
     #[structopt(name = "prefix", about = "Show the prefix of the current build")]
-    Prefix { name: String },
+    Prefix {},
     #[structopt(name = "global", about = "Set the build to use (global)")]
     Global { name: String },
     #[structopt(name = "local", about = "Set the build to use (local)")]
     Local { name: String },
 }
 
-fn main() {
+fn main() -> error::Result<()> {
     let opt = LLVMEnv::from_args();
     match opt {
-        LLVMEnv::Init {} => config::init_config().expect("Failed to initailzie"),
+        LLVMEnv::Init {} => config::init_config()?,
 
         LLVMEnv::Builds {} => {
-            let builds = build::builds().expect("Failed to load builds");
+            let builds = build::builds()?;
             for b in &builds {
-                println!("{}: {}", b.name(), b.prefix().display());
+                println!("{}: {}", b.name, b.prefix.display());
             }
         }
 
         LLVMEnv::Entries {} => {
-            let entries = config::load_entries().expect("Failed to load entries");
+            let entries = config::load_entries()?;
             for entry in &entries {
                 println!("{}", entry.get_name());
             }
         }
         LLVMEnv::BuildEntry { name, nproc } => {
-            let entry = config::load_entry(&name).expect("Failed to load entries");
+            let entry = config::load_entry(&name)?;
             let nproc = nproc.unwrap_or(num_cpus::get());
             entry.checkout().unwrap();
             entry.build(nproc).unwrap();
+        }
+
+        LLVMEnv::Prefix {} => {
+            let build = build::seek_build()?;
+            println!("{}", build.prefix.display());
+            if let Some(env) = build.llvmenv {
+                println!("Set by {}", env.display());
+            }
         }
 
         _ => {
             unimplemented!("opt = {:?}", opt);
         }
     }
+    Ok(())
 }
