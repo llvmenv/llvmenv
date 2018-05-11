@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use std::{env, fs};
 use toml;
 
-use build::*;
+use entry::*;
 use error::Result;
 
 pub const APP_NAME: &'static str = "llvmenv";
@@ -76,7 +76,7 @@ struct EntryParam {
     llvm_svn: Option<String>,
     clang_git: Option<String>,
     clang_svn: Option<String>,
-    option: Option<BuildOption>,
+    option: Option<CMakeOption>,
 }
 
 #[derive(Debug, Fail)]
