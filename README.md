@@ -7,8 +7,7 @@ Manage multiple LLVM/Clang build
 
 ```
 llvmenv 0.1.0
-Toshiki Teramura <toshiki.teramura@gmail.com>
-Manage multi LLVM builds
+Manage multiple LLVM/Clang builds
 
 USAGE:
     llvmenv <SUBCOMMAND>
