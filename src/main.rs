@@ -19,6 +19,9 @@ pub mod config;
 pub mod entry;
 pub mod error;
 
+use failure::err_msg;
+use std::env;
+use std::path::PathBuf;
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
@@ -45,10 +48,15 @@ enum LLVMEnv {
 
     #[structopt(name = "prefix", about = "Show the prefix of the current build")]
     Prefix {},
+
     #[structopt(name = "global", about = "Set the build to use (global)")]
     Global { name: String },
     #[structopt(name = "local", about = "Set the build to use (local)")]
-    Local { name: String },
+    Local {
+        name: String,
+        #[structopt(short = "p", long = "path", parse(from_os_str))]
+        path: Option<PathBuf>,
+    },
 }
 
 fn main() -> error::Result<()> {
@@ -59,7 +67,7 @@ fn main() -> error::Result<()> {
         LLVMEnv::Builds {} => {
             let builds = build::builds()?;
             for b in &builds {
-                println!("{}: {}", b.name, b.prefix.display());
+                println!("{}: {}", b.name(), b.prefix().display());
             }
         }
 
@@ -78,14 +86,28 @@ fn main() -> error::Result<()> {
 
         LLVMEnv::Prefix {} => {
             let build = build::seek_build()?;
-            println!("{}", build.prefix.display());
-            if let Some(env) = build.llvmenv {
-                println!("Set by {}", env.display());
+            println!("{}", build.prefix().display());
+            if let Some(env) = build.env_path() {
+                info!("Set by {}", env.display());
             }
         }
 
-        _ => {
-            unimplemented!("opt = {:?}", opt);
+        LLVMEnv::Global { name } => {
+            let build = build::Build::from_name(&name);
+            if build.exists() {
+                build.set_global()?;
+            } else {
+                return Err(err_msg(format!("Build '{}' does not exists", name)));
+            }
+        }
+        LLVMEnv::Local { name, path } => {
+            let build = build::Build::from_name(&name);
+            let path = path.unwrap_or(env::current_dir()?);
+            if build.exists() {
+                build.set_local(&path)?;
+            } else {
+                return Err(err_msg(format!("Build '{}' does not exists", name)));
+            }
         }
     }
     Ok(())

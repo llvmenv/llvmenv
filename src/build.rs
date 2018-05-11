@@ -1,5 +1,5 @@
 use glob::glob;
-use std::io::Read;
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::{env, fs};
 
@@ -10,9 +10,9 @@ const LLVMENV_FN: &'static str = ".llvmenv";
 
 #[derive(Debug)]
 pub struct Build {
-    pub name: String,
-    pub prefix: PathBuf,
-    pub llvmenv: Option<PathBuf>,
+    name: String,
+    prefix: PathBuf,
+    llvmenv: Option<PathBuf>,
 }
 
 impl Build {
@@ -24,7 +24,7 @@ impl Build {
         }
     }
 
-    fn from_path(path: &Path) -> Self {
+    pub fn from_path(path: &Path) -> Self {
         let name = path.file_name().unwrap().to_str().unwrap();
         Build {
             name: name.into(),
@@ -33,7 +33,10 @@ impl Build {
         }
     }
 
-    fn from_name(name: &str) -> Self {
+    pub fn from_name(name: &str) -> Self {
+        if name == "system" {
+            return Self::system();
+        }
         Build {
             name: name.into(),
             prefix: data_dir().join(name),
@@ -41,8 +44,35 @@ impl Build {
         }
     }
 
-    fn exists(&self) -> bool {
+    pub fn exists(&self) -> bool {
         self.prefix.is_dir()
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn prefix(&self) -> &Path {
+        &self.prefix
+    }
+
+    pub fn env_path(&self) -> Option<&Path> {
+        match self.llvmenv {
+            Some(ref path) => Some(path.as_path()),
+            None => None,
+        }
+    }
+
+    pub fn set_global(&self) -> Result<()> {
+        self.set_local(&config_dir())
+    }
+
+    pub fn set_local(&self, path: &Path) -> Result<()> {
+        let env = path.join(LLVMENV_FN);
+        let mut f = fs::File::create(env)?;
+        write!(f, "{}", self.name)?;
+        info!("Write setting to {}", path.display());
+        Ok(())
     }
 }
 
@@ -65,7 +95,7 @@ pub fn builds() -> Result<Vec<Build>> {
     Ok(bs)
 }
 
-fn load_llvmenv(path: &Path) -> Result<Option<Build>> {
+fn load_local_env(path: &Path) -> Result<Option<Build>> {
     let cand = path.join(LLVMENV_FN);
     if !cand.exists() {
         return Ok(None);
@@ -74,9 +104,6 @@ fn load_llvmenv(path: &Path) -> Result<Option<Build>> {
     let mut s = String::new();
     f.read_to_string(&mut s)?;
     let name = s.trim();
-    if name == "system" {
-        return Ok(Some(Build::system()));
-    }
     let mut build = Build::from_name(name);
     if build.exists() {
         build.llvmenv = Some(path.into());
@@ -86,11 +113,15 @@ fn load_llvmenv(path: &Path) -> Result<Option<Build>> {
     }
 }
 
+fn load_global_env() -> Result<Option<Build>> {
+    load_local_env(&config_dir())
+}
+
 pub fn seek_build() -> Result<Build> {
     // Seek .llvmenv from $PWD
     let mut path = env::current_dir()?;
     loop {
-        if let Some(mut build) = load_llvmenv(&path)? {
+        if let Some(mut build) = load_local_env(&path)? {
             build.llvmenv = Some(path.join(LLVMENV_FN));
             return Ok(build);
         }
@@ -100,7 +131,7 @@ pub fn seek_build() -> Result<Build> {
         };
     }
     // check global setting
-    if let Some(mut build) = load_llvmenv(&config_dir())? {
+    if let Some(mut build) = load_global_env()? {
         build.llvmenv = Some(config_dir().join(LLVMENV_FN));
         return Ok(build);
     }
