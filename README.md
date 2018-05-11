@@ -1,1 +1,29 @@
-# llvmenv
+llvmenv
+=========
+
+Manage multiple LLVM/Clang build
+
+[![CircleCI](https://circleci.com/gh/termoshtt/llvmenv.svg?style=shield)](https://circleci.com/gh/termoshtt/llvmenv)
+
+```
+llvmenv 0.1.0
+Toshiki Teramura <toshiki.teramura@gmail.com>
+Manage multi LLVM builds
+
+USAGE:
+    llvmenv <SUBCOMMAND>
+
+FLAGS:
+    -h, --help       Prints help information
+    -V, --version    Prints version information
+
+SUBCOMMANDS:
+    build-entry    Build LLVM/Clang
+    builds         List usable build
+    entries        List entries to be built
+    global         Set the build to use (global)
+    help           Prints this message or the help of the given subcommand(s)
+    init           Initialize llvmenv
+    local          Set the build to use (local)
+    prefix         Show the prefix of the current build
+```
