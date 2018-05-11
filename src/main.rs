@@ -71,8 +71,14 @@ fn main() -> error::Result<()> {
 
         LLVMEnv::Builds {} => {
             let builds = build::builds()?;
+            let max = builds.iter().map(|b| b.name().len()).max().unwrap();
             for b in &builds {
-                println!("{}: {}", b.name(), b.prefix().display());
+                println!(
+                    "{name:<width$}: {prefix}",
+                    name = b.name(),
+                    prefix = b.prefix().display(),
+                    width = max
+                );
             }
         }
 
