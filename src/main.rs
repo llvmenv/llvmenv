@@ -47,6 +47,11 @@ enum LLVMEnv {
         nproc: Option<usize>,
     },
 
+    #[structopt(name = "current", about = "Show the name of current build")]
+    Current {
+        #[structopt(short = "v", long = "verbose")]
+        verbose: bool,
+    },
     #[structopt(name = "prefix", about = "Show the prefix of the current build")]
     Prefix {
         #[structopt(short = "v", long = "verbose")]
@@ -98,6 +103,15 @@ fn main() -> error::Result<()> {
             entry.build(nproc).unwrap();
         }
 
+        LLVMEnv::Current { verbose } => {
+            let build = build::seek_build()?;
+            println!("{}", build.name());
+            if verbose {
+                if let Some(env) = build.env_path() {
+                    eprintln!("set by {}", env.display());
+                }
+            }
+        }
         LLVMEnv::Prefix { verbose } => {
             let build = build::seek_build()?;
             println!("{}", build.prefix().display());
