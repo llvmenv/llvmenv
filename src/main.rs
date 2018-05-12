@@ -61,6 +61,9 @@ enum LLVMEnv {
         #[structopt(short = "p", long = "path", parse(from_os_str))]
         path: Option<PathBuf>,
     },
+
+    #[structopt(name = "zsh", about = "Setup Zsh integration")]
+    Zsh {},
 }
 
 fn main() -> error::Result<()> {
@@ -123,6 +126,11 @@ fn main() -> error::Result<()> {
                 eprintln!("Build '{}' does not exists", name);
                 exit(1);
             }
+        }
+
+        LLVMEnv::Zsh {} => {
+            let src = include_str!("../llvmenv.zsh");
+            println!("{}", src);
         }
     }
     Ok(())
