@@ -1,9 +1,10 @@
 llvmenv
 =========
 
-Manage multiple LLVM/Clang build
-
+[![crate](https://img.shields.io/crates/v/llvmenv.svg)](https://crates.io/crates/llvmenv)
 [![CircleCI](https://circleci.com/gh/termoshtt/llvmenv.svg?style=shield)](https://circleci.com/gh/termoshtt/llvmenv)
+
+Manage multiple LLVM/Clang build
 
 ```
 llvmenv 0.1.1
