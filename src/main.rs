@@ -47,6 +47,11 @@ enum LLVMEnv {
         nproc: Option<usize>,
     },
 
+    #[structopt(name = "current", about = "Show the name of current build")]
+    Current {
+        #[structopt(short = "v", long = "verbose")]
+        verbose: bool,
+    },
     #[structopt(name = "prefix", about = "Show the prefix of the current build")]
     Prefix {
         #[structopt(short = "v", long = "verbose")]
@@ -61,6 +66,9 @@ enum LLVMEnv {
         #[structopt(short = "p", long = "path", parse(from_os_str))]
         path: Option<PathBuf>,
     },
+
+    #[structopt(name = "zsh", about = "Setup Zsh integration")]
+    Zsh {},
 }
 
 fn main() -> error::Result<()> {
@@ -95,6 +103,15 @@ fn main() -> error::Result<()> {
             entry.build(nproc).unwrap();
         }
 
+        LLVMEnv::Current { verbose } => {
+            let build = build::seek_build()?;
+            println!("{}", build.name());
+            if verbose {
+                if let Some(env) = build.env_path() {
+                    eprintln!("set by {}", env.display());
+                }
+            }
+        }
         LLVMEnv::Prefix { verbose } => {
             let build = build::seek_build()?;
             println!("{}", build.prefix().display());
@@ -123,6 +140,11 @@ fn main() -> error::Result<()> {
                 eprintln!("Build '{}' does not exists", name);
                 exit(1);
             }
+        }
+
+        LLVMEnv::Zsh {} => {
+            let src = include_str!("../llvmenv.zsh");
+            println!("{}", src);
         }
     }
     Ok(())
