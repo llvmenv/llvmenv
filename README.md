@@ -34,7 +34,7 @@ Usage (zsh integration)
 -----
 
 ```
-eval $(llvmenv zsh)
+source <(llvmenv zsh)
 ```
 
 in your `.zshrc`. Other shell support is WIP.
