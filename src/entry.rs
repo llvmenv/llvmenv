@@ -167,6 +167,8 @@ impl Entry {
                 opts.push(format!("-DLLVM_INCLUDE_DOCS={}", ex));
                 opts.push(format!("-DCLANG_INCLUDE_DOCS={}", ex));
             }
+            opts.push(format!("-DLLVM_INCLUDE_TEST=0", ex));
+            opts.push(format!("-DCLANG_INCLUDE_TEST={}", ex));
         }
         process::Command::new("cmake")
             .args(&opts)
