@@ -22,17 +22,18 @@ pub struct CMakeOption {
 }
 
 pub type URL = String;
+pub type Branch = String;
 
 #[derive(Debug)]
 pub enum LLVM {
-    SVN(URL),
-    Git(URL),
+    SVN(URL, Branch),
+    Git(URL, Branch),
 }
 
 #[derive(Debug)]
 pub enum Clang {
-    SVN(URL),
-    Git(URL),
+    SVN(URL, Branch),
+    Git(URL, Branch),
     None,
 }
 
@@ -61,30 +62,46 @@ impl Entry {
         if !src.exists() {
             // clone/checkout
             match self.llvm {
-                LLVM::SVN(ref url) => process::Command::new("svn")
+                LLVM::SVN(ref url, ref _branch) => {
+                    process::Command::new("svn")  // TODO support branch in SVN
                     .args(&["co", url.as_str()])
                     .arg(&self.name)
                     .current_dir(cache_dir())
-                    .check_run()?,
-                LLVM::Git(ref url) => process::Command::new("git")
-                    .args(&["clone", url.as_str()])
-                    .arg(&self.name)
-                    .current_dir(cache_dir())
-                    .check_run()?,
+                    .check_run()?
+                }
+                LLVM::Git(ref url, ref branch) => {
+                    process::Command::new("git")
+                        .args(&["clone", url.as_str()])
+                        .arg(&self.name)
+                        .current_dir(cache_dir())
+                        .check_run()?;
+                    process::Command::new("git")
+                        .args(&["checkout", branch])
+                        .current_dir(&src)
+                        .check_run()?;
+                }
             }
         }
         let tools = src.join("tools");
         let clang = tools.join("clang");
         if !clang.exists() {
             match self.clang {
-                Clang::SVN(ref url) => process::Command::new("svn")
+                Clang::SVN(ref url, ref _branch) => {
+                    process::Command::new("svn") // TODO support branch in SVN
                     .args(&["co", url.as_str(), "clang"])
                     .current_dir(tools)
-                    .check_run()?,
-                Clang::Git(ref url) => process::Command::new("git")
-                    .args(&["clone", url.as_str(), "clang"])
-                    .current_dir(tools)
-                    .check_run()?,
+                    .check_run()?
+                }
+                Clang::Git(ref url, ref branch) => {
+                    process::Command::new("git")
+                        .args(&["clone", url.as_str(), "clang"])
+                        .current_dir(tools)
+                        .check_run()?;
+                    process::Command::new("git")
+                        .args(&["checkout", branch])
+                        .current_dir(&clang)
+                        .check_run()?;
+                }
                 Clang::None => info!("No clang."),
             }
         }
@@ -95,11 +112,11 @@ impl Entry {
         let src = self.src_dir();
         if !src.exists() {
             match self.llvm {
-                LLVM::SVN(_) => process::Command::new("svn")
+                LLVM::SVN(_, _) => process::Command::new("svn")
                     .arg("update")
                     .current_dir(self.src_dir())
                     .check_run()?,
-                LLVM::Git(_) => process::Command::new("git")
+                LLVM::Git(_, _) => process::Command::new("git")
                     .arg("pull")
                     .current_dir(self.src_dir())
                     .check_run()?,
@@ -109,11 +126,11 @@ impl Entry {
         let clang = tools.join("clang");
         if !clang.exists() {
             match self.clang {
-                Clang::SVN(_) => process::Command::new("svn")
+                Clang::SVN(_, _) => process::Command::new("svn")
                     .arg("update")
                     .current_dir(clang)
                     .check_run()?,
-                Clang::Git(_) => process::Command::new("git")
+                Clang::Git(_, _) => process::Command::new("git")
                     .arg("pull")
                     .current_dir(clang)
                     .check_run()?,

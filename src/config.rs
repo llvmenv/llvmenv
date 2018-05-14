@@ -76,6 +76,8 @@ struct EntryParam {
     llvm_svn: Option<String>,
     clang_git: Option<String>,
     clang_svn: Option<String>,
+    llvm_branch: Option<String>,
+    clang_branch: Option<String>,
     option: Option<CMakeOption>,
 }
 
@@ -114,11 +116,11 @@ fn convert(name: &str, entry: EntryParam) -> Result<Entry> {
         if let Some(git) = entry.llvm_git {
             return Err(ParseError::DuplicateLLVM { name, svn, git }.into());
         } else {
-            LLVM::SVN(svn)
+            LLVM::SVN(svn, entry.llvm_branch.unwrap_or("trunk".into()))
         }
     } else {
         if let Some(git) = entry.llvm_git {
-            LLVM::Git(git)
+            LLVM::Git(git, entry.llvm_branch.unwrap_or("master".into()))
         } else {
             return Err(ParseError::NoLLVM { name }.into());
         }
@@ -128,11 +130,11 @@ fn convert(name: &str, entry: EntryParam) -> Result<Entry> {
         if let Some(git) = entry.clang_git {
             return Err(ParseError::DuplicateClang { name, svn, git }.into());
         } else {
-            Clang::SVN(svn)
+            Clang::SVN(svn, entry.clang_branch.unwrap_or("trunk".into()))
         }
     } else {
         if let Some(git) = entry.clang_git {
-            Clang::Git(git)
+            Clang::Git(git, entry.clang_branch.unwrap_or("master".into()))
         } else {
             Clang::None
         }
