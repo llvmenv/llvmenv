@@ -72,18 +72,6 @@ impl Entry {
                     .current_dir(cache_dir())
                     .check_run()?,
             }
-        } else {
-            // fetch/update
-            match self.llvm {
-                LLVM::SVN(_) => process::Command::new("svn")
-                    .arg("update")
-                    .current_dir(self.src_dir())
-                    .check_run()?,
-                LLVM::Git(_) => process::Command::new("git")
-                    .arg("pull")
-                    .current_dir(self.src_dir())
-                    .check_run()?,
-            };
         }
         let tools = src.join("tools");
         let clang = tools.join("clang");
@@ -99,7 +87,27 @@ impl Entry {
                     .check_run()?,
                 Clang::None => info!("No clang."),
             }
-        } else {
+        }
+        Ok(())
+    }
+
+    pub fn fetch(&self) -> Result<()> {
+        let src = self.src_dir();
+        if !src.exists() {
+            match self.llvm {
+                LLVM::SVN(_) => process::Command::new("svn")
+                    .arg("update")
+                    .current_dir(self.src_dir())
+                    .check_run()?,
+                LLVM::Git(_) => process::Command::new("git")
+                    .arg("pull")
+                    .current_dir(self.src_dir())
+                    .check_run()?,
+            };
+        }
+        let tools = src.join("tools");
+        let clang = tools.join("clang");
+        if !clang.exists() {
             match self.clang {
                 Clang::SVN(_) => process::Command::new("svn")
                     .arg("update")

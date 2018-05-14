@@ -43,7 +43,9 @@ enum LLVMEnv {
     #[structopt(name = "build-entry", about = "Build LLVM/Clang")]
     BuildEntry {
         name: String,
-        #[structopt(short = "j")]
+        #[structopt(short = "u", long = "update")]
+        update: Option<bool>,
+        #[structopt(short = "j", long = "nproc")]
         nproc: Option<usize>,
     },
 
@@ -96,10 +98,18 @@ fn main() -> error::Result<()> {
                 println!("{}", entry.get_name());
             }
         }
-        LLVMEnv::BuildEntry { name, nproc } => {
+        LLVMEnv::BuildEntry {
+            name,
+            update,
+            nproc,
+        } => {
             let entry = config::load_entry(&name)?;
+            let update = update.unwrap_or(false);
             let nproc = nproc.unwrap_or(num_cpus::get());
             entry.checkout().unwrap();
+            if update {
+                entry.fetch().unwrap();
+            }
             entry.build(nproc).unwrap();
         }
 
