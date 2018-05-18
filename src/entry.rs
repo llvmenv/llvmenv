@@ -72,12 +72,9 @@ impl Entry {
                 LLVM::Git(ref url, ref branch) => {
                     process::Command::new("git")
                         .args(&["clone", url.as_str()])
+                        .args(&["-b", branch])
                         .arg(&self.name)
                         .current_dir(cache_dir())
-                        .check_run()?;
-                    process::Command::new("git")
-                        .args(&["checkout", branch])
-                        .current_dir(&src)
                         .check_run()?;
                 }
             }
@@ -95,11 +92,8 @@ impl Entry {
                 Clang::Git(ref url, ref branch) => {
                     process::Command::new("git")
                         .args(&["clone", url.as_str(), "clang"])
+                        .args(&["-b", branch])
                         .current_dir(tools)
-                        .check_run()?;
-                    process::Command::new("git")
-                        .args(&["checkout", branch])
-                        .current_dir(&clang)
                         .check_run()?;
                 }
                 Clang::None => info!("No clang."),
