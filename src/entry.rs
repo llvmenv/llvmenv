@@ -16,6 +16,7 @@ pub struct Entry {
 
 #[derive(Deserialize, Debug)]
 pub struct CMakeOption {
+    build: Option<String>,
     target: Option<Vec<String>>,
     example: Option<bool>,
     document: Option<bool>,
@@ -145,6 +146,10 @@ impl Entry {
             self.prefix().display()
         ));
         if let Some(ref option) = self.option {
+            opts.push(format!(
+                "-DCMAKE_BUILD_TYPE={}",
+                option.build.as_ref().unwrap_or(&"Release".into())
+            ));
             if let Some(ref target) = option.target {
                 opts.push(format!(
                     "-DLLVM_TARGETS_TO_BUILD={}",
@@ -163,6 +168,8 @@ impl Entry {
             }
             opts.push(format!("-DLLVM_INCLUDE_TEST=0"));
             opts.push(format!("-DCLANG_INCLUDE_TEST=0"));
+        } else {
+            opts.push(format!("-DCMAKE_BUILD_TYPE=Release",));
         }
         process::Command::new("cmake")
             .args(&opts)
