@@ -148,7 +148,7 @@ impl Entry {
         if let Some(ref option) = self.option {
             opts.push(format!(
                 "-DCMAKE_BUILD_TYPE={}",
-                option.build.unwrap_or("Release")
+                option.build.as_ref().unwrap_or(&"Release".into())
             ));
             if let Some(ref target) = option.target {
                 opts.push(format!(
