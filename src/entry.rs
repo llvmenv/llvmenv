@@ -218,3 +218,28 @@ fn expand_tar(tar_path: &Path, out_path: &Path) -> Result<()> {
         .check_run()?;
     Ok(())
 }
+
+const LLVM_RELEASES: [(u32, u32, u32); 8] = [
+    (6, 0, 0),
+    (5, 0, 2),
+    (5, 0, 1),
+    (5, 0, 0),
+    (4, 0, 1),
+    (4, 0, 0),
+    (3, 9, 1),
+    (3, 9, 0),
+]; // XXX should we support more old versions?
+
+pub fn releases() -> Vec<Entry> {
+    LLVM_RELEASES.iter().map(|(ma,mi,p)| {
+        let name= format!("{}.{}.{}", ma, mi, p);
+        let llvm_url = format!("http://releases.llvm.org/{name}/llvm-{name}.src.tar.xz", name=name);
+        let clang_url = format!("http://releases.llvm.org/{name}/cfe-{name}.src.tar.xz", name=name);
+        Entry {
+            name,
+            llvm: LLVM::Tar(llvm_url),
+            clang: Clang::Tar(clang_url),
+            option: None
+        }
+    }).collect()
+}
