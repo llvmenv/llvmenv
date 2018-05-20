@@ -1,12 +1,7 @@
-use failure::err_msg;
-use std::collections::HashMap;
-use std::io::Read;
 use std::io::Write;
 use std::path::PathBuf;
 use std::{env, fs};
-use toml;
 
-use entry::*;
 use error::Result;
 
 pub const APP_NAME: &'static str = "llvmenv";
@@ -16,8 +11,6 @@ const DEFAULT_ENTRY: &'static [u8] = br#"
 [llvm-dev]
 llvm_git = "https://github.com/llvm-mirror/llvm"
 clang_git = "https://github.com/llvm-mirror/clang"
-
-[llvm-dev.option]
 target   = ["X86"]
 example  = false
 document = false
@@ -68,95 +61,4 @@ pub fn init_config() -> Result<()> {
         f.write(DEFAULT_ENTRY)?;
     }
     Ok(())
-}
-
-#[derive(Deserialize, Debug)]
-struct EntryParam {
-    llvm_git: Option<String>,
-    llvm_svn: Option<String>,
-    clang_git: Option<String>,
-    clang_svn: Option<String>,
-    llvm_branch: Option<String>,
-    clang_branch: Option<String>,
-    option: Option<CMakeOption>,
-}
-
-#[derive(Debug, Fail)]
-pub enum ParseError {
-    #[fail(display = "Duplicate LLVM in entry '{}': svn={}, git={}", name, svn, git)]
-    DuplicateLLVM {
-        name: String,
-        svn: String,
-        git: String,
-    },
-    #[fail(display = "No LLVM in entry '{}'", name)]
-    NoLLVM { name: String },
-    #[fail(display = "Duplicate Clang in entry '{}': svn={}, git={}", name, svn, git)]
-    DuplicateClang {
-        name: String,
-        svn: String,
-        git: String,
-    },
-}
-
-type TOMLData = HashMap<String, EntryParam>;
-
-fn load_toml() -> Result<TOMLData> {
-    let toml = config_dir().join(ENTRY_TOML);
-    let mut f = fs::File::open(toml)?;
-    let mut s = String::new();
-    f.read_to_string(&mut s)?;
-    let data = toml::from_str(&s)?;
-    Ok(data)
-}
-
-fn convert(name: &str, entry: EntryParam) -> Result<Entry> {
-    let name = name.into();
-    let llvm = if let Some(svn) = entry.llvm_svn {
-        if let Some(git) = entry.llvm_git {
-            return Err(ParseError::DuplicateLLVM { name, svn, git }.into());
-        } else {
-            LLVM::SVN(svn, entry.llvm_branch.unwrap_or("trunk".into()))
-        }
-    } else {
-        if let Some(git) = entry.llvm_git {
-            LLVM::Git(git, entry.llvm_branch.unwrap_or("master".into()))
-        } else {
-            return Err(ParseError::NoLLVM { name }.into());
-        }
-    };
-
-    let clang = if let Some(svn) = entry.clang_svn {
-        if let Some(git) = entry.clang_git {
-            return Err(ParseError::DuplicateClang { name, svn, git }.into());
-        } else {
-            Clang::SVN(svn, entry.clang_branch.unwrap_or("trunk".into()))
-        }
-    } else {
-        if let Some(git) = entry.clang_git {
-            Clang::Git(git, entry.clang_branch.unwrap_or("master".into()))
-        } else {
-            Clang::None
-        }
-    };
-
-    Ok(Entry::new(name, llvm, clang, entry.option))
-}
-
-pub fn load_entry(name: &str) -> Result<Entry> {
-    let mut data = load_toml()?;
-    if let Some(param) = data.remove(name) {
-        Ok(convert(name, param)?)
-    } else {
-        Err(err_msg(format!("Not found: {}", name)))
-    }
-}
-
-pub fn load_entries() -> Result<Vec<Entry>> {
-    let data = load_toml()?;
-    let mut entries = Vec::new();
-    for (k, v) in data.into_iter() {
-        entries.push(convert(&k, v)?);
-    }
-    Ok(entries)
 }

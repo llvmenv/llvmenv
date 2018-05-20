@@ -12,7 +12,6 @@ readme        = "README.md"
 categories    = []
 
 [dependencies]
-derive-new = "0.5"
 env_logger = "0.5"
 failure = "0.1"
 glob = "0.2"

@@ -1,27 +1,28 @@
+//! Manage entries, i.e. LLVM/Clang source to be built
+
+use failure::err_msg;
 use itertools::Itertools;
 use reqwest;
+use std::collections::HashMap;
+use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::{fs, process};
 use tempfile::NamedTempFile;
+use toml;
 
 use config::*;
 use error::*;
 
 /// An entry to be built.
-#[derive(Debug, new)]
+#[derive(Debug)]
 pub struct Entry {
     name: String,
     llvm: LLVM,
     clang: Clang,
-    option: Option<CMakeOption>,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct CMakeOption {
-    build: Option<String>,
-    target: Option<Vec<String>>,
-    example: Option<bool>,
-    document: Option<bool>,
+    build: String,
+    target: Vec<String>, // empty means all target
+    example: u32,
+    document: u32,
 }
 
 pub type URL = String;
@@ -43,6 +44,17 @@ pub enum Clang {
 }
 
 impl Entry {
+    fn default_option(name: String, llvm: LLVM, clang: Clang) -> Self {
+        Entry {
+            name,
+            llvm,
+            clang,
+            build: "Release".into(),
+            target: vec!["X86".into()],
+            example: 0,
+            document: 0,
+        }
+    }
     fn src_dir(&self) -> PathBuf {
         cache_dir().join(&self.name)
     }
@@ -158,32 +170,19 @@ impl Entry {
             "-DCMAKE_INSTALL_PREFIX={}",
             self.prefix().display()
         ));
-        if let Some(ref option) = self.option {
+        opts.push(format!("-DCMAKE_BUILD_TYPE={}", self.build));
+        if self.target.len() > 0 {
             opts.push(format!(
-                "-DCMAKE_BUILD_TYPE={}",
-                option.build.as_ref().unwrap_or(&"Release".into())
+                "-DLLVM_TARGETS_TO_BUILD={}",
+                self.target.iter().join(";")
             ));
-            if let Some(ref target) = option.target {
-                opts.push(format!(
-                    "-DLLVM_TARGETS_TO_BUILD={}",
-                    target.iter().join(";")
-                ));
-            }
-            if let Some(ref example) = option.example {
-                let ex = if *example { 1 } else { 0 };
-                opts.push(format!("-DLLVM_INCLUDE_EXAMPLES={}", ex));
-                opts.push(format!("-DCLANG_INCLUDE_EXAMPLES={}", ex));
-            }
-            if let Some(ref document) = option.example {
-                let ex = if *document { 1 } else { 0 };
-                opts.push(format!("-DLLVM_INCLUDE_DOCS={}", ex));
-                opts.push(format!("-DCLANG_INCLUDE_DOCS={}", ex));
-            }
-            opts.push(format!("-DLLVM_INCLUDE_TEST=0"));
-            opts.push(format!("-DCLANG_INCLUDE_TEST=0"));
-        } else {
-            opts.push(format!("-DCMAKE_BUILD_TYPE=Release",));
         }
+        opts.push(format!("-DLLVM_INCLUDE_EXAMPLES={}", self.example));
+        opts.push(format!("-DCLANG_INCLUDE_EXAMPLES={}", self.example));
+        opts.push(format!("-DLLVM_INCLUDE_DOCS={}", self.document));
+        opts.push(format!("-DCLANG_INCLUDE_DOCS={}", self.document));
+        opts.push(format!("-DLLVM_INCLUDE_TEST=0"));
+        opts.push(format!("-DCLANG_INCLUDE_TEST=0"));
         process::Command::new("cmake")
             .args(&opts)
             .arg(self.src_dir())
@@ -231,15 +230,128 @@ const LLVM_RELEASES: [(u32, u32, u32); 8] = [
 ]; // XXX should we support more old versions?
 
 pub fn releases() -> Vec<Entry> {
-    LLVM_RELEASES.iter().map(|(ma,mi,p)| {
-        let name= format!("{}.{}.{}", ma, mi, p);
-        let llvm_url = format!("http://releases.llvm.org/{name}/llvm-{name}.src.tar.xz", name=name);
-        let clang_url = format!("http://releases.llvm.org/{name}/cfe-{name}.src.tar.xz", name=name);
-        Entry {
-            name,
-            llvm: LLVM::Tar(llvm_url),
-            clang: Clang::Tar(clang_url),
-            option: None
+    LLVM_RELEASES
+        .iter()
+        .map(|(ma, mi, p)| {
+            let name = format!("{}.{}.{}", ma, mi, p);
+            let llvm_url = format!(
+                "http://releases.llvm.org/{name}/llvm-{name}.src.tar.xz",
+                name = name
+            );
+            let clang_url = format!(
+                "http://releases.llvm.org/{name}/cfe-{name}.src.tar.xz",
+                name = name
+            );
+            Entry::default_option(name, LLVM::Tar(llvm_url), Clang::Tar(clang_url))
+        })
+        .collect()
+}
+
+#[derive(Deserialize, Debug)]
+struct EntryParam {
+    llvm_git: Option<String>,
+    llvm_svn: Option<String>,
+    clang_git: Option<String>,
+    clang_svn: Option<String>,
+    llvm_branch: Option<String>,
+    clang_branch: Option<String>,
+    build: Option<String>,
+    target: Option<Vec<String>>,
+    example: Option<u32>,
+    document: Option<u32>,
+}
+
+impl EntryParam {
+    fn convert(self, name: &str) -> Result<Entry> {
+        let name = name.into();
+        let llvm = if let Some(svn) = self.llvm_svn {
+            if let Some(git) = self.llvm_git {
+                return Err(ParseError::DuplicateLLVM { name, svn, git }.into());
+            } else {
+                LLVM::SVN(svn, self.llvm_branch.unwrap_or("trunk".into()))
+            }
+        } else {
+            if let Some(git) = self.llvm_git {
+                LLVM::Git(git, self.llvm_branch.unwrap_or("master".into()))
+            } else {
+                return Err(ParseError::NoLLVM { name }.into());
+            }
+        };
+
+        let clang = if let Some(svn) = self.clang_svn {
+            if let Some(git) = self.clang_git {
+                return Err(ParseError::DuplicateClang { name, svn, git }.into());
+            } else {
+                Clang::SVN(svn, self.clang_branch.unwrap_or("trunk".into()))
+            }
+        } else {
+            if let Some(git) = self.clang_git {
+                Clang::Git(git, self.clang_branch.unwrap_or("master".into()))
+            } else {
+                Clang::None
+            }
+        };
+
+        let mut entry = Entry::default_option(name, llvm, clang);
+        if let Some(ref build) = self.build {
+            entry.build = build.clone();
         }
-    }).collect()
+        if let Some(ref target) = self.target {
+            entry.target = target.clone();
+        }
+        if let Some(ref example) = self.example {
+            entry.example = *example;
+        }
+        if let Some(ref document) = self.document {
+            entry.document = *document;
+        }
+        Ok(entry)
+    }
+}
+
+#[derive(Debug, Fail)]
+pub enum ParseError {
+    #[fail(display = "Duplicate LLVM in entry '{}': svn={}, git={}", name, svn, git)]
+    DuplicateLLVM {
+        name: String,
+        svn: String,
+        git: String,
+    },
+    #[fail(display = "No LLVM in entry '{}'", name)]
+    NoLLVM { name: String },
+    #[fail(display = "Duplicate Clang in entry '{}': svn={}, git={}", name, svn, git)]
+    DuplicateClang {
+        name: String,
+        svn: String,
+        git: String,
+    },
+}
+
+type TOMLData = HashMap<String, EntryParam>;
+
+fn load_toml() -> Result<TOMLData> {
+    let toml = config_dir().join(ENTRY_TOML);
+    let mut f = fs::File::open(toml)?;
+    let mut s = String::new();
+    f.read_to_string(&mut s)?;
+    let data = toml::from_str(&s)?;
+    Ok(data)
+}
+
+pub fn load_entry(name: &str) -> Result<Entry> {
+    let mut data = load_toml()?;
+    if let Some(param) = data.remove(name) {
+        Ok(param.convert(name)?)
+    } else {
+        Err(err_msg(format!("Not found: {}", name)))
+    }
+}
+
+pub fn load_entries() -> Result<Vec<Entry>> {
+    let data = load_toml()?;
+    let mut entries = Vec::new();
+    for (k, v) in data.into_iter() {
+        entries.push(v.convert(&k)?);
+    }
+    Ok(entries)
 }

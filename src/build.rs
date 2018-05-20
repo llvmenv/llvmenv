@@ -1,3 +1,5 @@
+//! Manage LLVM/Clang builds
+
 use glob::glob;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
