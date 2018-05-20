@@ -14,6 +14,8 @@ extern crate structopt;
 extern crate env_logger;
 extern crate glob;
 extern crate num_cpus;
+extern crate reqwest;
+extern crate tempfile;
 
 pub mod build;
 pub mod config;
