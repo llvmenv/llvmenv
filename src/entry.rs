@@ -1,6 +1,8 @@
 use itertools::Itertools;
-use std::path::PathBuf;
+use reqwest;
+use std::path::{Path, PathBuf};
 use std::{fs, process};
+use tempfile::NamedTempFile;
 
 use config::*;
 use error::*;
@@ -29,12 +31,14 @@ pub type Branch = String;
 pub enum LLVM {
     SVN(URL, Branch),
     Git(URL, Branch),
+    Tar(URL),
 }
 
 #[derive(Debug)]
 pub enum Clang {
     SVN(URL, Branch),
     Git(URL, Branch),
+    Tar(URL),
     None,
 }
 
@@ -65,10 +69,10 @@ impl Entry {
             match self.llvm {
                 LLVM::SVN(ref url, ref _branch) => {
                     process::Command::new("svn")  // TODO support branch in SVN
-                    .args(&["co", url.as_str()])
-                    .arg(&self.name)
-                    .current_dir(cache_dir())
-                    .check_run()?
+                        .args(&["co", url.as_str()])
+                        .arg(&self.name)
+                        .current_dir(cache_dir())
+                        .check_run()?
                 }
                 LLVM::Git(ref url, ref branch) => {
                     process::Command::new("git")
@@ -78,6 +82,10 @@ impl Entry {
                         .current_dir(cache_dir())
                         .check_run()?;
                 }
+                LLVM::Tar(ref url) => {
+                    let tmp = download_tmp(url)?;
+                    expand_tar(&tmp, &cache_dir())?;
+                }
             }
         }
         let tools = src.join("tools");
@@ -86,9 +94,9 @@ impl Entry {
             match self.clang {
                 Clang::SVN(ref url, ref _branch) => {
                     process::Command::new("svn") // TODO support branch in SVN
-                    .args(&["co", url.as_str(), "clang"])
-                    .current_dir(tools)
-                    .check_run()?
+                        .args(&["co", url.as_str(), "clang"])
+                        .current_dir(tools)
+                        .check_run()?
                 }
                 Clang::Git(ref url, ref branch) => {
                     process::Command::new("git")
@@ -96,6 +104,10 @@ impl Entry {
                         .args(&["-b", branch])
                         .current_dir(tools)
                         .check_run()?;
+                }
+                Clang::Tar(ref url) => {
+                    let tmp = download_tmp(url)?;
+                    expand_tar(&tmp, &cache_dir())?;
                 }
                 Clang::None => info!("No clang."),
             }
@@ -115,6 +127,7 @@ impl Entry {
                     .arg("pull")
                     .current_dir(self.src_dir())
                     .check_run()?,
+                LLVM::Tar(_) => {}
             };
         }
         let tools = src.join("tools");
@@ -129,7 +142,7 @@ impl Entry {
                     .arg("pull")
                     .current_dir(clang)
                     .check_run()?,
-                Clang::None => {}
+                Clang::Tar(_) | Clang::None => {}
             };
         }
         Ok(())
@@ -188,4 +201,20 @@ impl Entry {
             .check_run()?;
         Ok(())
     }
+}
+
+fn download_tmp(url: &URL) -> Result<PathBuf> {
+    let mut tmp = NamedTempFile::new()?;
+    let mut req = reqwest::get(url)?;
+    req.copy_to(&mut tmp)?;
+    Ok(tmp.path().into())
+}
+
+fn expand_tar(tar_path: &Path, out_path: &Path) -> Result<()> {
+    process::Command::new("tar")
+        .arg("x")
+        .arg(tar_path)
+        .current_dir(out_path)
+        .check_run()?;
+    Ok(())
 }
