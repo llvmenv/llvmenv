@@ -1,6 +1,6 @@
 version: 2
 jobs:
-  build:
+  test:
     docker:
       - image: rust:1.25
     steps:
@@ -9,3 +9,9 @@ jobs:
           name: cargo test
           command: |
             cargo test
+  check_format:
+    docker:
+      - image: rust:1.25
+    steps:
+      - checkout
+      - run: test -z "$(cargo fmt --all -- --write-mode=diff)"
