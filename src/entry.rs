@@ -211,7 +211,7 @@ fn download_tmp(url: &URL) -> Result<PathBuf> {
 
 fn expand_tar(tar_path: &Path, out_path: &Path) -> Result<()> {
     process::Command::new("tar")
-        .arg("x")
+        .arg("xf")
         .arg(tar_path)
         .current_dir(out_path)
         .check_run()?;
@@ -329,6 +329,7 @@ pub enum ParseError {
 
 type TOMLData = HashMap<String, EntryParam>;
 
+// small io wrapper to read TOML
 fn load_toml() -> Result<TOMLData> {
     let toml = config_dir().join(ENTRY_TOML);
     let mut f = fs::File::open(toml)?;
@@ -339,17 +340,16 @@ fn load_toml() -> Result<TOMLData> {
 }
 
 pub fn load_entry(name: &str) -> Result<Entry> {
-    let mut data = load_toml()?;
-    if let Some(param) = data.remove(name) {
-        Ok(param.convert(name)?)
-    } else {
-        Err(err_msg(format!("Not found: {}", name)))
-    }
+    let entries = load_entries()?;
+    entries
+        .into_iter()
+        .find(|ref e| e.name == name)
+        .ok_or(err_msg(format!("Entry does not found: {}", name)))
 }
 
 pub fn load_entries() -> Result<Vec<Entry>> {
     let data = load_toml()?;
-    let mut entries = Vec::new();
+    let mut entries = releases();
     for (k, v) in data.into_iter() {
         entries.push(v.convert(&k)?);
     }
