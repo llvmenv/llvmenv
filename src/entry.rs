@@ -241,7 +241,7 @@ const LLVM_RELEASES: [(u32, u32, u32); 8] = [
 pub fn releases() -> Vec<Entry> {
     LLVM_RELEASES
         .iter()
-        .map(|(ma, mi, p)| {
+        .map(|&(ma, mi, p)| {
             let name = format!("{}.{}.{}", ma, mi, p);
             let llvm_url = format!(
                 "http://releases.llvm.org/{name}/llvm-{name}.src.tar.xz",
