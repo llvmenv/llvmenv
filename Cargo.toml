@@ -12,7 +12,6 @@ readme        = "README.md"
 categories    = []
 
 [dependencies]
-derive-new = "0.5"
 env_logger = "0.5"
 failure = "0.1"
 glob = "0.2"
@@ -23,3 +22,5 @@ serde = "1"
 serde_derive = "1"
 structopt = "0.2"
 toml = "0.4"
+reqwest = "0.8"
+tempfile= "3"

@@ -3,8 +3,6 @@ extern crate serde;
 extern crate serde_derive;
 extern crate toml;
 #[macro_use]
-extern crate derive_new;
-#[macro_use]
 extern crate log;
 #[macro_use]
 extern crate failure;
@@ -14,6 +12,8 @@ extern crate structopt;
 extern crate env_logger;
 extern crate glob;
 extern crate num_cpus;
+extern crate reqwest;
+extern crate tempfile;
 
 pub mod build;
 pub mod config;
@@ -93,7 +93,7 @@ fn main() -> error::Result<()> {
         }
 
         LLVMEnv::Entries {} => {
-            let entries = config::load_entries()?;
+            let entries = entry::load_entries()?;
             for entry in &entries {
                 println!("{}", entry.get_name());
             }
@@ -103,7 +103,7 @@ fn main() -> error::Result<()> {
             update,
             nproc,
         } => {
-            let entry = config::load_entry(&name)?;
+            let entry = entry::load_entry(&name)?;
             let update = update.unwrap_or(false);
             let nproc = nproc.unwrap_or(num_cpus::get());
             entry.checkout().unwrap();
