@@ -14,7 +14,9 @@ jobs:
       - image: rust:1.25
     steps:
       - checkout
-      - run: cargo fmt --all -- --write-mode=diff
+      - run: |
+          rustup component add rustfmt-preview
+          cargo fmt --all -- --write-mode=diff
 
 workflows:
   version: 2
