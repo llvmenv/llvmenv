@@ -14,7 +14,7 @@ jobs:
       - image: rust:1.25
     steps:
       - checkout
-      - run: test -z "$(cargo fmt --all -- --write-mode=diff)"
+      - run: cargo fmt --all -- --write-mode=diff
 
 workflows:
   version: 2
