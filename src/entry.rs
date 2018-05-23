@@ -4,7 +4,7 @@ use failure::err_msg;
 use itertools::Itertools;
 use reqwest;
 use std::collections::HashMap;
-use std::io::{Read};
+use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::{fs, process};
 use tempfile::tempdir;
@@ -103,7 +103,10 @@ impl Entry {
                         .arg(tmp)
                         .current_dir(&dir)
                         .check_run()?;
-                    fs::rename(dir.path().join(format!("llvm-{}.src", &self.name)), &cache_dir().join(&self.name))?;
+                    fs::rename(
+                        dir.path().join(format!("llvm-{}.src", &self.name)),
+                        &cache_dir().join(&self.name),
+                    )?;
                 }
             }
         }
@@ -153,9 +156,7 @@ impl Entry {
                     .arg("pull")
                     .current_dir(self.src_dir())
                     .check_run()?,
-                LLVM::Tar(_) => {
-
-                }
+                LLVM::Tar(_) => {}
             };
         }
         let tools = src.join("tools");
