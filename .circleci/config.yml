@@ -1,6 +1,6 @@
 version: 2
 jobs:
-  build:
+  test:
     docker:
       - image: rust:1.25
     steps:
@@ -9,3 +9,20 @@ jobs:
           name: cargo test
           command: |
             cargo test
+  check_init:
+    docker:
+      - image: rust:1.25
+    steps:
+      - checkout
+      - run:
+          name: check init toml
+          command: |
+            cargo run init
+            cargo run entries
+
+workflows:
+  version: 2
+  tests:
+    jobs:
+      - test
+      - check_init
