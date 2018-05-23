@@ -12,8 +12,8 @@ const DEFAULT_ENTRY: &'static [u8] = br#"
 llvm_git = "https://github.com/llvm-mirror/llvm"
 clang_git = "https://github.com/llvm-mirror/clang"
 target   = ["X86"]
-example  = false
-document = false
+example  = 0
+document = 0
 "#;
 
 pub fn config_dir() -> PathBuf {
