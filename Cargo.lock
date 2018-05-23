@@ -401,7 +401,7 @@ dependencies = [
 
 [[package]]
 name = "llvmenv"
-version = "0.1.5"
+version = "0.1.6-alpha.0"
 dependencies = [
  "env_logger 0.5.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
