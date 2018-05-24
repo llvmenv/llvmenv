@@ -20,6 +20,7 @@ pub struct Entry {
     llvm: LLVM,
     clang: Clang,
     build: String,
+    prefix: PathBuf,
     target: Vec<String>, // empty means all target
     example: u32,
     document: u32,
@@ -45,11 +46,13 @@ pub enum Clang {
 
 impl Entry {
     fn default_option(name: String, llvm: LLVM, clang: Clang) -> Self {
+        let prefix = data_dir().join(&name);
         Entry {
             name,
             llvm,
             clang,
             build: "Release".into(),
+            prefix,
             target: vec!["X86".into()],
             example: 0,
             document: 0,
@@ -63,8 +66,12 @@ impl Entry {
         self.src_dir().join("build")
     }
 
-    pub fn prefix(&self) -> PathBuf {
-        data_dir().join(&self.name)
+    pub fn prefix(&self) -> &Path {
+        &self.prefix
+    }
+
+    pub fn overwrite_prefix(&mut self, prefix: &Path) {
+        self.prefix = prefix.into();
     }
 
     pub fn get_name(&self) -> &str {
@@ -266,6 +273,7 @@ struct EntryParam {
     llvm_branch: Option<String>,
     clang_branch: Option<String>,
     build: Option<String>,
+    prefix: Option<String>,
     target: Option<Vec<String>>,
     example: Option<u32>,
     document: Option<u32>,
@@ -305,6 +313,9 @@ impl EntryParam {
         let mut entry = Entry::default_option(name, llvm, clang);
         if let Some(ref build) = self.build {
             entry.build = build.clone();
+        }
+        if let Some(ref prefix) = self.prefix {
+            entry.prefix = PathBuf::from(prefix.clone())
         }
         if let Some(ref target) = self.target {
             entry.target = target.clone();
