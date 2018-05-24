@@ -70,6 +70,10 @@ impl Entry {
         &self.prefix
     }
 
+    pub fn overwrite_prefix(&mut self, prefix: &Path) {
+        self.prefix = prefix.into();
+    }
+
     pub fn get_name(&self) -> &str {
         &self.name
     }

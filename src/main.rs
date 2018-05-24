@@ -44,6 +44,8 @@ enum LLVMEnv {
         update: Option<bool>,
         #[structopt(short = "j", long = "nproc")]
         nproc: Option<usize>,
+        #[structopt(long = "prefix", parse(from_os_str), help = "Overwrite prefix")]
+        prefix: Option<PathBuf>,
     },
 
     #[structopt(name = "current", about = "Show the name of current build")]
@@ -99,8 +101,12 @@ fn main() -> error::Result<()> {
             name,
             update,
             nproc,
+            prefix,
         } => {
-            let entry = entry::load_entry(&name)?;
+            let mut entry = entry::load_entry(&name)?;
+            if let Some(prefix) = prefix {
+                entry.overwrite_prefix(&prefix);
+            }
             let update = update.unwrap_or(false);
             let nproc = nproc.unwrap_or(num_cpus::get());
             entry.checkout().unwrap();
