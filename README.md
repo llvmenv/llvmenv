@@ -30,14 +30,21 @@ SUBCOMMANDS:
     zsh            Setup Zsh integration
 ```
 
+Install
+-------
+1. Install Rust using [rustup](https://github.com/rust-lang-nursery/rustup.rs)
+2. `cargo install llvmenv`
+
 zsh integration
 -----
+You can swtich LLVM/Clang builds automatically using zsh precmd-hook. Please add a line into your `.zshrc`:
 
 ```
 source <(llvmenv zsh)
 ```
 
-in your `.zshrc`. Other shell support is WIP.
+Concepts
+=========
 
 entry
 ------
@@ -61,6 +68,6 @@ There is a special build "system", which uses system's executables.
 
 global/local/prefix
 --------------------
-`llvmenv prefix` returns the PATH for executables in build (e.g. `$XDG_DATA_HOME/llvmenv/llvm-dev`, or `/usr` for system build).
+`llvmenv prefix` returns the path of the current build (e.g. `$XDG_DATA_HOME/llvmenv/llvm-dev`, or `/usr` for system build).
 `llvmenv global [name]` sets default build, and `llvmenv local [name]` sets directory-local build by creating `.llvmenv` text file.
 You can confirm which `.llvmenv` sets the current prefix by `llvmenv prefix -v`.
