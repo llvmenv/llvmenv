@@ -26,8 +26,11 @@ use std::process::exit;
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
-#[structopt(name = "llvmenv", about = "Manage multiple LLVM/Clang builds",
-            raw(setting = "structopt::clap::AppSettings::ColoredHelp"))]
+#[structopt(
+    name = "llvmenv",
+    about = "Manage multiple LLVM/Clang builds",
+    raw(setting = "structopt::clap::AppSettings::ColoredHelp")
+)]
 enum LLVMEnv {
     #[structopt(name = "init", about = "Initialize llvmenv")]
     Init {},
