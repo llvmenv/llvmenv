@@ -71,7 +71,11 @@ enum LLVMEnv {
     },
 
     #[structopt(name = "archive", about = "archive build into *.tar.xz")]
-    Archive { name: String },
+    Archive {
+        name: String,
+        #[structopt(short = "v", long = "verbose")]
+        verbose: bool,
+    },
 
     #[structopt(name = "zsh", about = "Setup Zsh integration")]
     Zsh {},
@@ -154,9 +158,9 @@ fn main() -> error::Result<()> {
             build.set_local(&path)?;
         }
 
-        LLVMEnv::Archive { name } => {
+        LLVMEnv::Archive { name, verbose } => {
             let build = get_existing_build(&name);
-            build.archive()?;
+            build.archive(verbose)?;
         }
 
         LLVMEnv::Zsh {} => {

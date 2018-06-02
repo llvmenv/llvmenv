@@ -78,9 +78,9 @@ impl Build {
         Ok(())
     }
 
-    pub fn archive(&self) -> Result<()> {
+    pub fn archive(&self, verbose: bool) -> Result<()> {
         Command::new("tar")
-            .arg("cvf")
+            .arg(if verbose { "cvf" } else { "cf" })
             .arg(format!("{}.tar.xz", self.name))
             .arg("--use-compress-prog=pixz")
             .arg(&self.name)
