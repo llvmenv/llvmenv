@@ -7,7 +7,7 @@ llvmenv
 Manage multiple LLVM/Clang build
 
 ```
-llvmenv 0.1.1
+llvmenv 0.1.6
 Manage multiple LLVM/Clang builds
 
 USAGE:
@@ -30,11 +30,44 @@ SUBCOMMANDS:
     zsh            Setup Zsh integration
 ```
 
-Usage (zsh integration)
+Install
+-------
+1. Install Rust using [rustup](https://github.com/rust-lang-nursery/rustup.rs)
+2. `cargo install llvmenv`
+
+zsh integration
 -----
+You can swtich LLVM/Clang builds automatically using zsh precmd-hook. Please add a line into your `.zshrc`:
 
 ```
 source <(llvmenv zsh)
 ```
 
-in your `.zshrc`. Other shell support is WIP.
+Concepts
+=========
+
+entry
+------
+"entry" descrives how to compile LLVM/Clang, and set by `entry.toml` at `$XDG_CONFIG_HOME/llvmenv` (usually `$HOME/.config/llvmenv`).
+`llvmenv init` generates default setting:
+
+```toml
+[llvm-dev]
+llvm_git = "https://github.com/llvm-mirror/llvm"
+clang_git = "https://github.com/llvm-mirror/clang"
+target   = ["X86"]
+example  = 0
+document = 0
+```
+
+build
+------
+"build" is a directory where compiled executables (e.g. clang) and libraries are installed.
+Builds are compiled by `llvmenv build-entry`, and placed at `$XDG_DATA_HOME/llvmenv` (usually `$HOME/.local/share/llvmenv`).
+There is a special build "system", which uses system's executables.
+
+global/local/prefix
+--------------------
+`llvmenv prefix` returns the path of the current build (e.g. `$XDG_DATA_HOME/llvmenv/llvm-dev`, or `/usr` for system build).
+`llvmenv global [name]` sets default build, and `llvmenv local [name]` sets directory-local build by creating `.llvmenv` text file.
+You can confirm which `.llvmenv` sets the current prefix by `llvmenv prefix -v`.
