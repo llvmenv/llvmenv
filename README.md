@@ -61,11 +61,26 @@ example   = 0
 document  = 0
 ```
 
+There is also pre-defined entries corresponding to the LLVM/Clang releases:
+
+```
+$ llvmenv entries
+6.0.0
+5.0.2
+5.0.1
+5.0.0
+4.0.1
+4.0.0
+3.9.1
+3.9.0
+... (your entries)
+```
+
 build
 ------
 - "build" is a directory where compiled executables (e.g. clang) and libraries are installed.
 - They are compiled by `llvmenv build-entry`, and placed at `$XDG_DATA_HOME/llvmenv` (usually `$HOME/.local/share/llvmenv`).
-- There is a special build "system", which uses system's executables.
+- There is a special build, "system", which uses system's executables.
 
 global/local/prefix
 --------------------
