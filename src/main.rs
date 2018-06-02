@@ -49,6 +49,8 @@ enum LLVMEnv {
         nproc: Option<usize>,
         #[structopt(long = "prefix", parse(from_os_str), help = "Overwrite prefix")]
         prefix: Option<PathBuf>,
+        #[structopt(long = "build", help = "Overwrite cmake build setting (Debug/Release)")]
+        build: Option<String>,
     },
 
     #[structopt(name = "current", about = "Show the name of current build")]
