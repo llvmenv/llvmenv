@@ -1,5 +1,6 @@
 //! Manage LLVM/Clang builds
 
+use failure::err_msg;
 use glob::glob;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
@@ -152,4 +153,19 @@ pub fn seek_build() -> Result<Build> {
         return Ok(build);
     }
     Ok(Build::system())
+}
+
+pub fn expand(archive: &Path, verbose: bool) -> Result<()> {
+    if !archive.exists() {
+        return Err(err_msg(format!(
+            "Archive does not found: {}",
+            archive.display()
+        )));
+    }
+    Command::new("tar")
+        .arg(if verbose { "xvf" } else { "xf" })
+        .arg(archive)
+        .current_dir(data_dir())
+        .check_run()?;
+    Ok(())
 }

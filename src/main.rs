@@ -76,6 +76,13 @@ enum LLVMEnv {
         #[structopt(short = "v", long = "verbose")]
         verbose: bool,
     },
+    #[structopt(name = "expand", about = "expand archive")]
+    Expand {
+        #[structopt(parse(from_os_str))]
+        path: PathBuf,
+        #[structopt(short = "v", long = "verbose")]
+        verbose: bool,
+    },
 
     #[structopt(name = "zsh", about = "Setup Zsh integration")]
     Zsh {},
@@ -161,6 +168,9 @@ fn main() -> error::Result<()> {
         LLVMEnv::Archive { name, verbose } => {
             let build = get_existing_build(&name);
             build.archive(verbose)?;
+        }
+        LLVMEnv::Expand { path, verbose } => {
+            build::expand(&path, verbose)?;
         }
 
         LLVMEnv::Zsh {} => {
