@@ -53,21 +53,22 @@ entry
 
 ```toml
 [llvm-dev]
-llvm_git = "https://github.com/llvm-mirror/llvm"
+llvm_git  = "https://github.com/llvm-mirror/llvm"
 clang_git = "https://github.com/llvm-mirror/clang"
-target   = ["X86"]
-example  = 0
-document = 0
+target    = ["X86"]
+build     = "Release"
+example   = 0
+document  = 0
 ```
 
 build
 ------
-"build" is a directory where compiled executables (e.g. clang) and libraries are installed.
-Builds are compiled by `llvmenv build-entry`, and placed at `$XDG_DATA_HOME/llvmenv` (usually `$HOME/.local/share/llvmenv`).
-There is a special build "system", which uses system's executables.
+- "build" is a directory where compiled executables (e.g. clang) and libraries are installed.
+- They are compiled by `llvmenv build-entry`, and placed at `$XDG_DATA_HOME/llvmenv` (usually `$HOME/.local/share/llvmenv`).
+- There is a special build "system", which uses system's executables.
 
 global/local/prefix
 --------------------
-`llvmenv prefix` returns the path of the current build (e.g. `$XDG_DATA_HOME/llvmenv/llvm-dev`, or `/usr` for system build).
-`llvmenv global [name]` sets default build, and `llvmenv local [name]` sets directory-local build by creating `.llvmenv` text file.
-You can confirm which `.llvmenv` sets the current prefix by `llvmenv prefix -v`.
+- `llvmenv prefix` returns the path of the current build (e.g. `$XDG_DATA_HOME/llvmenv/llvm-dev`, or `/usr` for system build).
+- `llvmenv global [name]` sets default build, and `llvmenv local [name]` sets directory-local build by creating `.llvmenv` text file.
+- You can confirm which `.llvmenv` sets the current prefix by `llvmenv prefix -v`.
