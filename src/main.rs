@@ -26,11 +26,8 @@ use std::process::exit;
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
-#[structopt(
-    name = "llvmenv",
-    about = "Manage multiple LLVM/Clang builds",
-    raw(setting = "structopt::clap::AppSettings::ColoredHelp")
-)]
+#[structopt(name = "llvmenv", about = "Manage multiple LLVM/Clang builds",
+            raw(setting = "structopt::clap::AppSettings::ColoredHelp"))]
 enum LLVMEnv {
     #[structopt(name = "init", about = "Initialize llvmenv")]
     Init {},
@@ -71,6 +68,20 @@ enum LLVMEnv {
         name: String,
         #[structopt(short = "p", long = "path", parse(from_os_str))]
         path: Option<PathBuf>,
+    },
+
+    #[structopt(name = "archive", about = "archive build into *.tar.xz (require pixz)")]
+    Archive {
+        name: String,
+        #[structopt(short = "v", long = "verbose")]
+        verbose: bool,
+    },
+    #[structopt(name = "expand", about = "expand archive")]
+    Expand {
+        #[structopt(parse(from_os_str))]
+        path: PathBuf,
+        #[structopt(short = "v", long = "verbose")]
+        verbose: bool,
     },
 
     #[structopt(name = "zsh", about = "Setup Zsh integration")]
@@ -145,23 +156,21 @@ fn main() -> error::Result<()> {
         }
 
         LLVMEnv::Global { name } => {
-            let build = build::Build::from_name(&name);
-            if build.exists() {
-                build.set_global()?;
-            } else {
-                eprintln!("Build '{}' does not exists", name);
-                exit(1);
-            }
+            let build = get_existing_build(&name);
+            build.set_global()?;
         }
         LLVMEnv::Local { name, path } => {
-            let build = build::Build::from_name(&name);
+            let build = get_existing_build(&name);
             let path = path.unwrap_or(env::current_dir()?);
-            if build.exists() {
-                build.set_local(&path)?;
-            } else {
-                eprintln!("Build '{}' does not exists", name);
-                exit(1);
-            }
+            build.set_local(&path)?;
+        }
+
+        LLVMEnv::Archive { name, verbose } => {
+            let build = get_existing_build(&name);
+            build.archive(verbose)?;
+        }
+        LLVMEnv::Expand { path, verbose } => {
+            build::expand(&path, verbose)?;
         }
 
         LLVMEnv::Zsh {} => {
@@ -170,4 +179,14 @@ fn main() -> error::Result<()> {
         }
     }
     Ok(())
+}
+
+fn get_existing_build(name: &str) -> build::Build {
+    let build = build::Build::from_name(&name);
+    if build.exists() {
+        build
+    } else {
+        eprintln!("Build '{}' does not exists", name);
+        exit(1)
+    }
 }

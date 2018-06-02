@@ -1,8 +1,10 @@
 //! Manage LLVM/Clang builds
 
+use failure::err_msg;
 use glob::glob;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
+use std::process::Command;
 use std::{env, fs};
 
 use config::*;
@@ -76,6 +78,19 @@ impl Build {
         info!("Write setting to {}", path.display());
         Ok(())
     }
+
+    pub fn archive(&self, verbose: bool) -> Result<()> {
+        let filename = format!("{}.tar.xz", self.name);
+        Command::new("tar")
+            .arg(if verbose { "cvf" } else { "cf" })
+            .arg(&filename)
+            .arg("--use-compress-prog=pixz")
+            .arg(&self.name)
+            .current_dir(data_dir())
+            .check_run()?;
+        println!("{}", data_dir().join(filename).display());
+        Ok(())
+    }
 }
 
 fn local_builds() -> Result<Vec<Build>> {
@@ -138,4 +153,19 @@ pub fn seek_build() -> Result<Build> {
         return Ok(build);
     }
     Ok(Build::system())
+}
+
+pub fn expand(archive: &Path, verbose: bool) -> Result<()> {
+    if !archive.exists() {
+        return Err(err_msg(format!(
+            "Archive does not found: {}",
+            archive.display()
+        )));
+    }
+    Command::new("tar")
+        .arg(if verbose { "xvf" } else { "xf" })
+        .arg(archive)
+        .current_dir(data_dir())
+        .check_run()?;
+    Ok(())
 }
