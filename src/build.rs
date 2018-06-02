@@ -3,6 +3,7 @@
 use glob::glob;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
+use std::process::Command;
 use std::{env, fs};
 
 use config::*;
@@ -74,6 +75,17 @@ impl Build {
         let mut f = fs::File::create(env)?;
         write!(f, "{}", self.name)?;
         info!("Write setting to {}", path.display());
+        Ok(())
+    }
+
+    pub fn archive(&self) -> Result<()> {
+        Command::new("tar")
+            .arg("cvf")
+            .arg(format!("{}.tar.xz", self.name))
+            .arg("--use-compress-prog=pixz")
+            .arg(&self.name)
+            .current_dir(data_dir())
+            .check_run()?;
         Ok(())
     }
 }
