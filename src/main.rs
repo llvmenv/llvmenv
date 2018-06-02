@@ -70,7 +70,7 @@ enum LLVMEnv {
         path: Option<PathBuf>,
     },
 
-    #[structopt(name = "archive", about = "archive build into *.tar.xz")]
+    #[structopt(name = "archive", about = "archive build into *.tar.xz (require pixz)")]
     Archive {
         name: String,
         #[structopt(short = "v", long = "verbose")]

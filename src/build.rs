@@ -79,13 +79,15 @@ impl Build {
     }
 
     pub fn archive(&self, verbose: bool) -> Result<()> {
+        let filename = format!("{}.tar.xz", self.name);
         Command::new("tar")
             .arg(if verbose { "cvf" } else { "cf" })
-            .arg(format!("{}.tar.xz", self.name))
+            .arg(&filename)
             .arg("--use-compress-prog=pixz")
             .arg(&self.name)
             .current_dir(data_dir())
             .check_run()?;
+        println!("{}", data_dir().join(filename).display());
         Ok(())
     }
 }
