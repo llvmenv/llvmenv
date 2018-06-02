@@ -107,6 +107,7 @@ fn main() -> error::Result<()> {
             update,
             nproc,
             prefix,
+            build,
         } => {
             let mut entry = entry::load_entry(&name)?;
             if let Some(prefix) = prefix {
@@ -117,6 +118,9 @@ fn main() -> error::Result<()> {
             entry.checkout().unwrap();
             if update {
                 entry.fetch().unwrap();
+            }
+            if let Some(build) = build {
+                entry.overwrite_build(&build);
             }
             entry.build(nproc).unwrap();
         }
