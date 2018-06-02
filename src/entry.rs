@@ -74,6 +74,10 @@ impl Entry {
         self.prefix = prefix.into();
     }
 
+    pub fn overwrite_build(&mut self, build: &str) {
+        self.build = build.into();
+    }
+
     pub fn get_name(&self) -> &str {
         &self.name
     }

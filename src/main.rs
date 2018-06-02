@@ -26,8 +26,11 @@ use std::process::exit;
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
-#[structopt(name = "llvmenv", about = "Manage multiple LLVM/Clang builds",
-            raw(setting = "structopt::clap::AppSettings::ColoredHelp"))]
+#[structopt(
+    name = "llvmenv",
+    about = "Manage multiple LLVM/Clang builds",
+    raw(setting = "structopt::clap::AppSettings::ColoredHelp")
+)]
 enum LLVMEnv {
     #[structopt(name = "init", about = "Initialize llvmenv")]
     Init {},
@@ -46,6 +49,8 @@ enum LLVMEnv {
         nproc: Option<usize>,
         #[structopt(long = "prefix", parse(from_os_str), help = "Overwrite prefix")]
         prefix: Option<PathBuf>,
+        #[structopt(long = "build", help = "Overwrite cmake build setting (Debug/Release)")]
+        build: Option<String>,
     },
 
     #[structopt(name = "current", about = "Show the name of current build")]
@@ -102,6 +107,7 @@ fn main() -> error::Result<()> {
             update,
             nproc,
             prefix,
+            build,
         } => {
             let mut entry = entry::load_entry(&name)?;
             if let Some(prefix) = prefix {
@@ -112,6 +118,9 @@ fn main() -> error::Result<()> {
             entry.checkout().unwrap();
             if update {
                 entry.fetch().unwrap();
+            }
+            if let Some(build) = build {
+                entry.overwrite_build(&build);
             }
             entry.build(nproc).unwrap();
         }

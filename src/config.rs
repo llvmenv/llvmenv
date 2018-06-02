@@ -7,13 +7,15 @@ use error::Result;
 pub const APP_NAME: &'static str = "llvmenv";
 pub const ENTRY_TOML: &'static str = "entry.toml";
 
+/// Example of entry.toml
 const DEFAULT_ENTRY: &'static [u8] = br#"
 [llvm-dev]
-llvm_git = "https://github.com/llvm-mirror/llvm"
+llvm_git  = "https://github.com/llvm-mirror/llvm"
 clang_git = "https://github.com/llvm-mirror/clang"
-target   = ["X86"]
-example  = 0
-document = 0
+build     = "Release"
+target    = ["X86"]
+example   = 0
+document  = 0
 "#;
 
 pub fn config_dir() -> PathBuf {
