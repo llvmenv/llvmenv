@@ -5,7 +5,6 @@ use glob::glob;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::str::FromStr;
 use std::{env, fs};
 
 use config::*;
@@ -100,7 +99,11 @@ impl Build {
         let output = ::std::str::from_utf8(&output.stdout)?;
         let v = output
             .split(".")
-            .map(|s| FromStr::from_str(s).map_err(|_| err_msg("Cannot parse version")))
+            .map(|s| {
+                s.trim()
+                    .parse()
+                    .map_err(|_| err_msg(format!("Cannot parse version: {}", s)))
+            })
             .collect::<Result<Vec<_>>>()?;
         if v.len() != 3 {
             return Err(err_msg("Unexpected output from llvm-config"));
