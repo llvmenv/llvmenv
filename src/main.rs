@@ -60,6 +60,17 @@ enum LLVMEnv {
         #[structopt(short = "v", long = "verbose")]
         verbose: bool,
     },
+    #[structopt(name = "version", about = "Show the base version of the current build")]
+    Version {
+        #[structopt(short = "n", long = "name")]
+        name: Option<String>,
+        #[structopt(long = "major")]
+        major: bool,
+        #[structopt(long = "minor")]
+        minor: bool,
+        #[structopt(long = "patch")]
+        patch: bool,
+    },
 
     #[structopt(name = "global", about = "Set the build to use (global)")]
     Global { name: String },
@@ -152,6 +163,33 @@ fn main() -> error::Result<()> {
                 if let Some(env) = build.env_path() {
                     eprintln!("set by {}", env.display());
                 }
+            }
+        }
+        LLVMEnv::Version {
+            name,
+            major,
+            minor,
+            patch,
+        } => {
+            let build = if let Some(name) = name {
+                get_existing_build(&name)
+            } else {
+                build::seek_build()?
+            };
+            let (ma, mi, pa) = build.version()?;
+            if !(major || minor || patch) {
+                println!("{}.{}.{}", ma, mi, pa);
+            } else {
+                if major {
+                    print!("{}", ma);
+                }
+                if minor {
+                    print!("{}", mi);
+                }
+                if patch {
+                    print!("{}", pa);
+                }
+                println!("");
             }
         }
 
