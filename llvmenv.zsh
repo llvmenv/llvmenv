@@ -20,7 +20,9 @@ function llvmenv_env_llvm_sys () {
 function llvmenv_update () {
   llvmenv_remove_path
   llvmenv_append_path
-  llvmenv_env_llvm_sys
+  if [[ -n "$LLVMENV_RUST_BINDING" ]]; then
+    llvmenv_env_llvm_sys
+  fi
 }
 
 autoload -Uz add-zsh-hook
