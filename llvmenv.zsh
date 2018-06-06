@@ -13,9 +13,16 @@ function llvmenv_append_path() {
   fi
 }
 
+function llvmenv_env_llvm_sys () {
+  export LLVM_SYS_$(llvmenv version --major --minor)_PREFIX=$(llvmenv prefix)
+}
+
 function llvmenv_update () {
   llvmenv_remove_path
   llvmenv_append_path
+  if [[ -n "$LLVMENV_RUST_BINDING" ]]; then
+    llvmenv_env_llvm_sys
+  fi
 }
 
 autoload -Uz add-zsh-hook

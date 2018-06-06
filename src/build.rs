@@ -91,6 +91,25 @@ impl Build {
         println!("{}", data_dir().join(filename).display());
         Ok(())
     }
+
+    pub fn version(&self) -> Result<(u32, u32, u32)> {
+        let output = Command::new(self.prefix().join("bin").join("llvm-config"))
+            .arg("--version")
+            .output()?;
+        let output = ::std::str::from_utf8(&output.stdout)?;
+        let v = output
+            .split(".")
+            .map(|s| {
+                s.trim()
+                    .parse()
+                    .map_err(|_| err_msg(format!("Cannot parse version: {}", s)))
+            })
+            .collect::<Result<Vec<_>>>()?;
+        if v.len() != 3 {
+            return Err(err_msg("Unexpected output from llvm-config"));
+        }
+        Ok((v[0], v[1], v[2]))
+    }
 }
 
 fn local_builds() -> Result<Vec<Build>> {
