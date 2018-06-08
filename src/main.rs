@@ -41,7 +41,7 @@ enum LLVMEnv {
     BuildEntry {
         name: String,
         #[structopt(short = "u", long = "update")]
-        update: Option<bool>,
+        update: bool,
         #[structopt(short = "j", long = "nproc")]
         nproc: Option<usize>,
         #[structopt(long = "prefix", parse(from_os_str), help = "Overwrite prefix")]
@@ -135,7 +135,6 @@ fn main() -> error::Result<()> {
             if let Some(prefix) = prefix {
                 entry.overwrite_prefix(&prefix);
             }
-            let update = update.unwrap_or(false);
             let nproc = nproc.unwrap_or(num_cpus::get());
             entry.checkout().unwrap();
             if update {
