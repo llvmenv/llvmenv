@@ -43,6 +43,15 @@ You can swtich LLVM/Clang builds automatically using zsh precmd-hook. Please add
 source <(llvmenv zsh)
 ```
 
+If `$LLVMENV_RUST_BINDING` environmental value is non-zero, llvmenv exports `LLVM_SYS_60_PREFIX=$(llvmenv prefix)` in addition to `$PATH`.
+
+```
+export LLVMENV_RUST_BINDING=1
+source <(llvmenv zsh)
+```
+
+This is usuful for [llvm-sys.rs](https://github.com/tari/llvm-sys.rs) users. Be sure that this env value will not be unset by llvmenv, only overwrite.
+
 Concepts
 =========
 
