@@ -9,6 +9,7 @@ extern crate failure;
 extern crate itertools;
 #[macro_use]
 extern crate structopt;
+extern crate dirs;
 extern crate env_logger;
 extern crate glob;
 extern crate num_cpus;

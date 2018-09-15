@@ -1,3 +1,4 @@
+use dirs;
 use std::io::Write;
 use std::path::PathBuf;
 use std::{env, fs};
@@ -21,7 +22,7 @@ document  = 0
 pub fn config_dir() -> PathBuf {
     let home = match env::var("XDG_CONFIG_HOME") {
         Ok(path) => path.into(),
-        Err(_) => env::home_dir()
+        Err(_) => dirs::home_dir()
             .expect("$HOME does not found")
             .join(".config"), // Use $HOME/.config
     };
@@ -31,7 +32,7 @@ pub fn config_dir() -> PathBuf {
 pub fn cache_dir() -> PathBuf {
     let home = match env::var("XDG_CACHE_HOME") {
         Ok(path) => path.into(),
-        Err(_) => env::home_dir()
+        Err(_) => dirs::home_dir()
             .expect("$HOME does not found")
             .join(".cache"), // Use $HOME/.cache
     };
@@ -41,7 +42,7 @@ pub fn cache_dir() -> PathBuf {
 pub fn data_dir() -> PathBuf {
     let home = match env::var("XDG_DATA_HOME") {
         Ok(path) => path.into(),
-        Err(_) => env::home_dir()
+        Err(_) => dirs::home_dir()
             .expect("$HOME does not found")
             .join(".local")
             .join("share"), // Use $HOME/.local/share/llvmenv
