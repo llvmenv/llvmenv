@@ -103,8 +103,7 @@ impl Build {
                 s.trim()
                     .parse()
                     .map_err(|_| err_msg(format!("Cannot parse version: {}", s)))
-            })
-            .collect::<Result<Vec<_>>>()?;
+            }).collect::<Result<Vec<_>>>()?;
         if v.len() != 3 {
             return Err(err_msg("Unexpected output from llvm-config"));
         }
@@ -120,8 +119,7 @@ fn local_builds() -> Result<Vec<Build>> {
             } else {
                 None
             }
-        })
-        .collect())
+        }).collect())
 }
 
 pub fn builds() -> Result<Vec<Build>> {

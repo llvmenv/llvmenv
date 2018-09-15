@@ -26,8 +26,11 @@ use std::process::exit;
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
-#[structopt(name = "llvmenv", about = "Manage multiple LLVM/Clang builds",
-            raw(setting = "structopt::clap::AppSettings::ColoredHelp"))]
+#[structopt(
+    name = "llvmenv",
+    about = "Manage multiple LLVM/Clang builds",
+    raw(setting = "structopt::clap::AppSettings::ColoredHelp")
+)]
 enum LLVMEnv {
     #[structopt(name = "init", about = "Initialize llvmenv")]
     Init {},
@@ -44,9 +47,16 @@ enum LLVMEnv {
         update: bool,
         #[structopt(short = "j", long = "nproc")]
         nproc: Option<usize>,
-        #[structopt(long = "prefix", parse(from_os_str), help = "Overwrite prefix")]
+        #[structopt(
+            long = "prefix",
+            parse(from_os_str),
+            help = "Overwrite prefix"
+        )]
         prefix: Option<PathBuf>,
-        #[structopt(long = "build", help = "Overwrite cmake build setting (Debug/Release)")]
+        #[structopt(
+            long = "build",
+            help = "Overwrite cmake build setting (Debug/Release)"
+        )]
         build: Option<String>,
     },
 
@@ -55,12 +65,18 @@ enum LLVMEnv {
         #[structopt(short = "v", long = "verbose")]
         verbose: bool,
     },
-    #[structopt(name = "prefix", about = "Show the prefix of the current build")]
+    #[structopt(
+        name = "prefix",
+        about = "Show the prefix of the current build"
+    )]
     Prefix {
         #[structopt(short = "v", long = "verbose")]
         verbose: bool,
     },
-    #[structopt(name = "version", about = "Show the base version of the current build")]
+    #[structopt(
+        name = "version",
+        about = "Show the base version of the current build"
+    )]
     Version {
         #[structopt(short = "n", long = "name")]
         name: Option<String>,
@@ -81,7 +97,10 @@ enum LLVMEnv {
         path: Option<PathBuf>,
     },
 
-    #[structopt(name = "archive", about = "archive build into *.tar.xz (require pixz)")]
+    #[structopt(
+        name = "archive",
+        about = "archive build into *.tar.xz (require pixz)"
+    )]
     Archive {
         name: String,
         #[structopt(short = "v", long = "verbose")]

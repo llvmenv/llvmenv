@@ -21,7 +21,8 @@ pub trait CheckRun {
 impl CheckRun for process::Command {
     fn check_run(&mut self) -> CommandResult {
         let cmd = format!("{:?}", self);
-        let st = self.status()
+        let st = self
+            .status()
             .map_err(|_| CommandError::LaunchFailed { cmd: cmd.clone() })?;
         match st.code() {
             Some(errno) => {
