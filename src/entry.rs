@@ -264,8 +264,7 @@ pub fn releases() -> Vec<Entry> {
                 name = name
             );
             Entry::default_option(name, LLVM::Tar(llvm_url), Clang::Tar(clang_url))
-        })
-        .collect()
+        }).collect()
 }
 
 #[derive(Deserialize, Debug)]
@@ -336,7 +335,12 @@ impl EntryParam {
 
 #[derive(Debug, Fail)]
 pub enum ParseError {
-    #[fail(display = "Duplicate LLVM in entry '{}': svn={}, git={}", name, svn, git)]
+    #[fail(
+        display = "Duplicate LLVM in entry '{}': svn={}, git={}",
+        name,
+        svn,
+        git
+    )]
     DuplicateLLVM {
         name: String,
         svn: String,
@@ -344,7 +348,12 @@ pub enum ParseError {
     },
     #[fail(display = "No LLVM in entry '{}'", name)]
     NoLLVM { name: String },
-    #[fail(display = "Duplicate Clang in entry '{}': svn={}, git={}", name, svn, git)]
+    #[fail(
+        display = "Duplicate Clang in entry '{}': svn={}, git={}",
+        name,
+        svn,
+        git
+    )]
     DuplicateClang {
         name: String,
         svn: String,
