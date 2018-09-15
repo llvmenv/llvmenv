@@ -239,7 +239,8 @@ fn download(url: &URL, temp: &Path) -> Result<()> {
     Ok(())
 }
 
-const LLVM_RELEASES: [(u32, u32, u32); 8] = [
+const LLVM_RELEASES: [(u32, u32, u32); 9] = [
+    (6, 0, 1),
     (6, 0, 0),
     (5, 0, 2),
     (5, 0, 1),
@@ -248,7 +249,7 @@ const LLVM_RELEASES: [(u32, u32, u32); 8] = [
     (4, 0, 0),
     (3, 9, 1),
     (3, 9, 0),
-]; // XXX should we support more old versions?
+];
 
 pub fn releases() -> Vec<Entry> {
     LLVM_RELEASES
