@@ -3,6 +3,7 @@ llvmenv
 
 [![crate](https://img.shields.io/crates/v/llvmenv.svg)](https://crates.io/crates/llvmenv)
 [![CircleCI](https://circleci.com/gh/termoshtt/llvmenv.svg?style=shield)](https://circleci.com/gh/termoshtt/llvmenv)
+[![Build status](https://ci.appveyor.com/api/projects/status/o57ki11d3bkjcmtm/branch/master?svg=true)](https://ci.appveyor.com/project/termoshtt/llvmenv/branch/master)
 
 Manage multiple LLVM/Clang build
 
