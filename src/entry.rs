@@ -7,7 +7,6 @@ use std::collections::HashMap;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::{fs, process};
-use tempfile::tempdir;
 use toml;
 
 use config::*;
@@ -106,18 +105,15 @@ impl Entry {
                         .check_run()?;
                 }
                 LLVM::Tar(ref url) => {
-                    let dir = tempdir()?;
-                    let tmp = dir.path().join("llvm.tar.xz");
+                    let tmp = cache_dir().join("llvm.tar.xz");
                     download(url, &tmp)?;
                     process::Command::new("tar")
                         .arg("xf")
-                        .arg(tmp)
-                        .current_dir(&dir)
+                        .arg(&tmp)
+                        .current_dir(&cache_dir())
                         .check_run()?;
-                    fs::rename(
-                        dir.path().join(format!("llvm-{}.src", &self.name)),
-                        &cache_dir().join(&self.name),
-                    )?;
+                    fs::rename(cache_dir().join(format!("llvm-{}.src", &self.name)), &src)?;
+                    fs::remove_file(&tmp)?;
                 }
             }
         }
@@ -139,15 +135,15 @@ impl Entry {
                         .check_run()?;
                 }
                 Clang::Tar(ref url) => {
-                    let dir = tempdir()?;
-                    let tmp = dir.path().join("cfe.tar.xz");
+                    let tmp = cache_dir().join("cfe.tar.xz");
                     download(url, &tmp)?;
                     process::Command::new("tar")
                         .arg("xf")
-                        .arg(tmp)
-                        .current_dir(&dir)
+                        .arg(&tmp)
+                        .current_dir(&cache_dir())
                         .check_run()?;
-                    fs::rename(dir.path().join(format!("cfe-{}.src", &self.name)), &clang)?;
+                    fs::rename(cache_dir().join(format!("cfe-{}.src", &self.name)), &clang)?;
+                    fs::remove_file(&tmp)?;
                 }
                 Clang::None => info!("No clang."),
             }
