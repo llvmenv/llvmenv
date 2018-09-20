@@ -239,7 +239,8 @@ fn download(url: &URL, temp: &Path) -> Result<()> {
     Ok(())
 }
 
-const LLVM_RELEASES: [(u32, u32, u32); 9] = [
+const LLVM_RELEASES: [(u32, u32, u32); 10] = [
+    (7, 0, 0),
     (6, 0, 1),
     (6, 0, 0),
     (5, 0, 2),
