@@ -33,6 +33,7 @@ SUBCOMMANDS:
 
 Install
 -------
+0. Install cmake, make, and g++ (or clang++)
 1. Install Rust using [rustup](https://github.com/rust-lang-nursery/rustup.rs)
 2. `cargo install llvmenv`
 
