@@ -8,8 +8,8 @@ pub type CommandResult = ::std::result::Result<(), CommandError>;
 pub enum CommandError {
     #[fail(display = "Exit with error-code({}): {}", errno, cmd)]
     ErrorCode { errno: i32, cmd: String },
-    #[fail(display = "Launch failed: {}", cmd)]
-    LaunchFailed { cmd: String },
+    #[fail(display = "External command not found: {}", cmd)]
+    CommandNotFound { cmd: String },
     #[fail(display = "Terminated by signal: {}", cmd)]
     TerminatedBySignal { cmd: String },
 }
@@ -23,7 +23,7 @@ impl CheckRun for process::Command {
         let cmd = format!("{:?}", self);
         let st = self
             .status()
-            .map_err(|_| CommandError::LaunchFailed { cmd: cmd.clone() })?;
+            .map_err(|_| CommandError::CommandNotFound { cmd: cmd.clone() })?;
         match st.code() {
             Some(errno) => {
                 if errno != 0 {
