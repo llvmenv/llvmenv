@@ -13,10 +13,10 @@ steps:
   displayName: 'cargo test'
 
 strategy:
-  matrix: 
-  stable_msvc:
-    channel: stable
-    target: x86_64-pc-windows-msvc
-  stable_gnu:
-    channel: stable
-    target: x86_64-pc-windows-gnu
+  matrix:
+    stable_msvc:
+      channel: stable
+      target: x86_64-pc-windows-msvc
+    stable_gnu:
+      channel: stable
+      target: x86_64-pc-windows-gnu
