@@ -13,13 +13,12 @@ jobs:
 - job: Windows
   pool:
     vmImage: vs2017
+  variables:
+    PATH: "%USERPROFILE%/.cargo/bin;%PATH%"
   steps:
   - script: |
       curl https://sh.rustup.rs -sSf | sh -s -- -y
     displayName: 'Setup Rust'
-
   - script: |
       cargo test
-    variables:
-      PATH: "%USERPROFILE%/.cargo/bin;%PATH%"
     displayName: 'cargo test'
