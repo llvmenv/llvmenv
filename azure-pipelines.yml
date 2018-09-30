@@ -13,11 +13,17 @@ steps:
   displayName: 'cargo test'
 
 strategy:
-  maxParallel: 2
+  maxParallel: 4
   matrix:
     stable_msvc:
       channel: stable
       target: x86_64-pc-windows-msvc
     stable_gnu:
       channel: stable
+      target: x86_64-pc-windows-gnu
+    nightly_msvc:
+      channel: nightly
+      target: x86_64-pc-windows-msvc
+    nightly_gnu:
+      channel: nightly
       target: x86_64-pc-windows-gnu
