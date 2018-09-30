@@ -1,9 +1,22 @@
 pool:
   vmImage: vs2017
+
 steps:
 - script: |
-    curl https://sh.rustup.rs -sSf | sh -s -- -y
+    curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain %channel% --default-host %target%
   displayName: 'Setup Rust'
 - script: |
-    %USERPROFILE%/.cargo/bin/cargo test
+    set PATH=%PATH%;%USERPROFILE%\.cargo\bin
+    rustc -vV
+    cargo -vV
+    cargo test -v
   displayName: 'cargo test'
+
+strategy:
+  matrix: 
+  stable_msvc:
+    channel: stable
+    target: x86_64-pc-windows-msvc
+  stable_gnu:
+    channel: stable
+    target: x86_64-pc-windows-gnu
