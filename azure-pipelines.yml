@@ -1,25 +1,9 @@
-resources:
-  containers:
-  - container: rust_stable
-    image: rust:1.29.1
-
-jobs:
-- job: Linux
-  pool:
-    vmImage: "ubuntu 16.04"
-  container: rust_stable
-  steps:
-  - script: |
-      cargo test
-    displayName: 'cargo test'
-
-- job: Windows
-  pool:
-    vmImage: vs2017
-  steps:
-  - script: |
-      curl https://sh.rustup.rs -sSf | sh -s -- -y
-    displayName: 'Setup Rust'
-  - script: |
-      %USERPROFILE%/.cargo/bin/cargo test
-    displayName: 'cargo test'
+pool:
+  vmImage: vs2017
+steps:
+- script: |
+    curl https://sh.rustup.rs -sSf | sh -s -- -y
+  displayName: 'Setup Rust'
+- script: |
+    %USERPROFILE%/.cargo/bin/cargo test
+  displayName: 'cargo test'
