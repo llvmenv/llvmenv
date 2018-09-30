@@ -3,7 +3,7 @@ jobs:
   pool:
     vmImage: "ubuntu 16.04"
   variables:
-    PATH: "$HOME/.cargo/bin;/usr/bin"
+    PATH: "$HOME/.cargo/bin;$PATH"
   steps:
   - script: |
       curl https://sh.rustup.rs -sSf | sh -s -- -y
@@ -16,7 +16,7 @@ jobs:
   pool:
     vmImage: vs2017
   variables:
-    PATH: "%USERPROFILE%/.cargo/bin;C:/Windows/system32"
+    PATH: "%USERPROFILE%/.cargo/bin;%PATH%"
   steps:
   - script: |
       curl https://sh.rustup.rs -sSf | sh -s -- -y
