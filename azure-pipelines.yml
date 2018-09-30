@@ -20,4 +20,6 @@ jobs:
 
   - script: |
       cargo test
+    variables:
+      PATH: "%USERPROFILE%\.cargo\bin"
     displayName: 'cargo test'
