@@ -2,14 +2,12 @@ jobs:
 - job: Linux
   pool:
     vmImage: "ubuntu 16.04"
-  variables:
-    PATH: "$HOME/.cargo/bin;/usr/bin;/bin"
   steps:
   - script: |
       curl https://sh.rustup.rs -sSf | sh -s -- -y
     displayName: 'Setup Rust'
   - script: |
-      cargo test
+      $HOME/.cargo/bin/cargo test
     displayName: 'cargo test'
 
 - job: Windows
