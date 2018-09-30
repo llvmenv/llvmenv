@@ -2,12 +2,10 @@ jobs:
 - job: Linux
   pool:
     vmImage: "ubuntu 16.04"
+  container: "rust:1.29.1"
   steps:
   - script: |
-      curl https://sh.rustup.rs -sSf | sh -s -- -y
-    displayName: 'Setup Rust'
-  - script: |
-      $HOME/.cargo/bin/cargo test
+      cargo test
     displayName: 'cargo test'
 
 - job: Windows
