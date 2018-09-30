@@ -13,6 +13,7 @@ steps:
   displayName: 'cargo test'
 
 strategy:
+  maxParallel: 2
   matrix:
     stable_msvc:
       channel: stable
