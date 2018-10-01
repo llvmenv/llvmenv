@@ -14,9 +14,9 @@ const LLVMENV_FN: &'static str = ".llvmenv";
 
 #[derive(Debug)]
 pub struct Build {
-    name: String,
-    prefix: PathBuf,
-    llvmenv: Option<PathBuf>,
+    name: String,             // name and id of build
+    prefix: PathBuf,          // the path where the LLVM build realy exists
+    llvmenv: Option<PathBuf>, // path of .llvmenv
 }
 
 impl Build {
