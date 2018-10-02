@@ -14,7 +14,7 @@ pub type Branch = String;
 
 #[derive(Debug)]
 pub enum Resource {
-    Svn(URL, Option<Branch>),
+    Svn(URL, Option<Branch>), // FIXME branch for SVN is not supported
     Git(URL, Option<Branch>),
     Tar(URL),
 }
