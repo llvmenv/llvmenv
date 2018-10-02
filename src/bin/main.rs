@@ -1,25 +1,10 @@
-extern crate serde;
-#[macro_use]
-extern crate serde_derive;
-extern crate toml;
-#[macro_use]
-extern crate log;
-#[macro_use]
-extern crate failure;
-extern crate itertools;
 #[macro_use]
 extern crate structopt;
-extern crate dirs;
 extern crate env_logger;
-extern crate glob;
+extern crate llvmenv;
 extern crate num_cpus;
-extern crate reqwest;
-extern crate tempfile;
 
-pub mod build;
-pub mod config;
-pub mod entry;
-pub mod error;
+use llvmenv::*;
 
 use std::env;
 use std::path::PathBuf;
@@ -231,7 +216,7 @@ fn main() -> error::Result<()> {
         }
 
         LLVMEnv::Zsh {} => {
-            let src = include_str!("../llvmenv.zsh");
+            let src = include_str!("../../llvmenv.zsh");
             println!("{}", src);
         }
     }
