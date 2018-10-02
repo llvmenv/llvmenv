@@ -13,20 +13,20 @@ pub type URL = String;
 pub type Branch = String;
 
 #[derive(Debug)]
-pub enum RemoteSrc {
+pub enum Resource {
     Svn(URL, Option<Branch>),
     Git(URL, Option<Branch>),
     Tar(URL),
 }
 
-impl RemoteSrc {
+impl Resource {
     pub fn download(&self, dest: &Path) -> Result<()> {
         match self {
-            RemoteSrc::Svn(url, _branch) => Command::new("svn")
+            Resource::Svn(url, _branch) => Command::new("svn")
                 .args(&["co", url.as_str()])
                 .arg(dest)
                 .check_run()?,
-            RemoteSrc::Git(url, branch) => {
+            Resource::Git(url, branch) => {
                 let mut git = Command::new("git");
                 git.args(&["clone", url.as_str()]);
                 if let Some(branch) = branch {
@@ -34,7 +34,7 @@ impl RemoteSrc {
                 }
                 git.arg(dest).check_run()?;
             }
-            RemoteSrc::Tar(url) => {
+            Resource::Tar(url) => {
                 let path = download_file(url, &cache_dir())?;
                 Command::new("tar").arg("xf").arg(path).check_run()?;
             }
