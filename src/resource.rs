@@ -6,7 +6,6 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use config::*;
 use error::*;
 
 pub type URL = String;
@@ -27,16 +26,21 @@ impl Resource {
                 .arg(dest)
                 .check_run()?,
             Resource::Git(url, branch) => {
+                info!("Git clone {}", url);
                 let mut git = Command::new("git");
                 git.args(&["clone", url.as_str()]);
                 if let Some(branch) = branch {
                     git.args(&["-b", branch]);
                 }
-                git.arg(dest).check_run()?;
+                git.current_dir(dest).check_run()?;
             }
             Resource::Tar(url) => {
-                let path = download_file(url, &cache_dir())?;
-                Command::new("tar").arg("xf").arg(path).check_run()?;
+                let path = download_file(url, &dest)?;
+                Command::new("tar")
+                    .arg("xf")
+                    .arg(path)
+                    .current_dir(dest)
+                    .check_run()?;
             }
         }
         Ok(())
@@ -51,7 +55,7 @@ fn get_filename_from_url(url_str: &URL) -> Result<String> {
 }
 
 fn download_file(url: &URL, temp: &Path) -> Result<PathBuf> {
-    eprintln!("Download: {}", url);
+    info!("Download: {}", url);
     let mut req = reqwest::get(url)?;
     let out = if temp.is_dir() {
         let name = get_filename_from_url(url)?;
@@ -68,11 +72,37 @@ fn download_file(url: &URL, temp: &Path) -> Result<PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tempdir::TempDir;
+
+    // Test donwloading this repo
+    #[test]
+    fn test_git_donwload() -> Result<()> {
+        let git = Resource::Git("http://github.com/termoshtt/llvmenv".into(), None);
+        let tmp_dir = TempDir::new("git_download_test")?;
+        git.download(tmp_dir.path())?;
+        let top = tmp_dir.path().join("llvmenv");
+        assert!(top.is_dir());
+        Ok(())
+    }
+
+    #[test]
+    fn test_tar_download() -> Result<()> {
+        let url = "https://github.com/termoshtt/llvmenv/archive/0.1.10.tar.gz".into();
+        let tar = Resource::Tar(url);
+        let tmp_dir = TempDir::new("tar_download_test")?;
+        tar.download(tmp_dir.path())?;
+        let top = tmp_dir.path().join("llvmenv-0.1.10");
+        assert!(top.is_dir());
+        Ok(())
+    }
 
     #[test]
     fn test_get_filename_from_url() {
-        let url = "http://releases.llvm.org/6.0.1/llvm-6.0.1.src.tar.xz";
-        assert_eq!(get_filename_from_url(url).unwrap(), "llvm-6.0.1.src.tar.xz");
+        let url = "http://releases.llvm.org/6.0.1/llvm-6.0.1.src.tar.xz".into();
+        assert_eq!(
+            get_filename_from_url(&url).unwrap(),
+            "llvm-6.0.1.src.tar.xz"
+        );
     }
 
 }
