@@ -52,7 +52,7 @@ export LLVMENV_RUST_BINDING=1
 source <(llvmenv zsh)
 ```
 
-This is usuful for [llvm-sys.rs](https://github.com/tari/llvm-sys.rs) users. Be sure that this env value will not be unset by llvmenv, only overwrite.
+This is useful for [llvm-sys.rs](https://github.com/tari/llvm-sys.rs) users. Be sure that this env value will not be unset by llvmenv, only overwrite.
 
 Concepts
 =========
