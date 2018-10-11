@@ -20,6 +20,9 @@ pub enum Resource {
 
 impl Resource {
     pub fn download(&self, dest: &Path) -> Result<()> {
+        if !dest.is_dir() {
+            return Err(err_msg("Download destination must be a directory"));
+        }
         match self {
             Resource::Svn(url, _branch) => Command::new("svn")
                 .args(&["co", url.as_str()])
@@ -38,7 +41,7 @@ impl Resource {
                 let path = download_file(url, &dest)?;
                 Command::new("tar")
                     .arg("xf")
-                    .arg(path)
+                    .arg(path.file_name().unwrap())
                     .current_dir(dest)
                     .check_run()?;
             }
