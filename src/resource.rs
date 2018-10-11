@@ -8,14 +8,19 @@ use std::process::Command;
 
 use error::*;
 
-pub type URL = String;
-pub type Branch = String;
-
 #[derive(Debug)]
 pub enum Resource {
-    Svn(URL, Option<Branch>), // FIXME branch for SVN is not supported
-    Git(URL, Option<Branch>),
-    Tar(URL),
+    Svn {
+        url: String,
+        branch: Option<String>, // FIXME branch for SVN is not supported
+    },
+    Git {
+        url: String,
+        branch: Option<String>,
+    },
+    Tar {
+        url: String,
+    },
 }
 
 impl Resource {
@@ -24,11 +29,11 @@ impl Resource {
             return Err(err_msg("Download destination must be a directory"));
         }
         match self {
-            Resource::Svn(url, _branch) => Command::new("svn")
+            Resource::Svn { url, .. } => Command::new("svn")
                 .args(&["co", url.as_str()])
                 .arg(dest)
                 .check_run()?,
-            Resource::Git(url, branch) => {
+            Resource::Git { url, branch } => {
                 info!("Git clone {}", url);
                 let mut git = Command::new("git");
                 git.args(&["clone", url.as_str()]);
@@ -37,7 +42,7 @@ impl Resource {
                 }
                 git.current_dir(dest).check_run()?;
             }
-            Resource::Tar(url) => {
+            Resource::Tar { url } => {
                 let path = download_file(url, &dest)?;
                 Command::new("tar")
                     .arg("xf")
@@ -50,14 +55,14 @@ impl Resource {
     }
 }
 
-fn get_filename_from_url(url_str: &URL) -> Result<String> {
+fn get_filename_from_url(url_str: &str) -> Result<String> {
     let url = ::url::Url::parse(url_str)?;
     let seg = url.path_segments().ok_or(err_msg("URL parse failed"))?;
     let filename = seg.last().ok_or(err_msg("URL is invalid"))?;
     Ok(filename.to_string())
 }
 
-fn download_file(url: &URL, temp: &Path) -> Result<PathBuf> {
+fn download_file(url: &str, temp: &Path) -> Result<PathBuf> {
     info!("Download: {}", url);
     let mut req = reqwest::get(url)?;
     let out = if temp.is_dir() {
