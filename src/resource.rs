@@ -62,10 +62,7 @@ impl Resource {
                 if let Some(branch) = branch {
                     git.args(&["-b", branch]);
                 }
-                git.current_dir(dest)
-                    .stdout(Stdio::null())
-                    .stderr(Stdio::null())
-                    .check_run()?;
+                git.current_dir(dest).check_run()?;
             }
             Resource::Tar { url } => {
                 let path = download_file(url, &dest)?;
