@@ -95,7 +95,13 @@ impl Build {
     pub fn version(&self) -> Result<(u32, u32, u32)> {
         let output = Command::new(self.prefix().join("bin").join("llvm-config"))
             .arg("--version")
-            .output()?;
+            .output()
+            .map_err(|_| {
+                err_msg(format!(
+                    "llvm-config command not found for {}",
+                    self.prefix().display()
+                ))
+            })?;
         let output = ::std::str::from_utf8(&output.stdout)?;
         let v = output
             .split(".")
