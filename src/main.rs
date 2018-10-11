@@ -195,30 +195,20 @@ fn main() -> error::Result<()> {
             } else {
                 build::seek_build()?
             };
-            match build.version() {
-                Ok((ma, mi, pa)) => {
-                    if !(major || minor || patch) {
-                        println!("{}.{}.{}", ma, mi, pa);
-                    } else {
-                        if major {
-                            print!("{}", ma);
-                        }
-                        if minor {
-                            print!("{}", mi);
-                        }
-                        if patch {
-                            print!("{}", pa);
-                        }
-                        println!("");
-                    }
+            let (ma, mi, pa) = build.version()?;
+            if !(major || minor || patch) {
+                println!("{}.{}.{}", ma, mi, pa);
+            } else {
+                if major {
+                    print!("{}", ma);
                 }
-                Err(err) => {
-                    eprintln!(
-                        "Cannot get LLVM version of {}: {}",
-                        build.prefix().display(),
-                        err
-                    );
+                if minor {
+                    print!("{}", mi);
                 }
+                if patch {
+                    print!("{}", pa);
+                }
+                println!("");
             }
         }
 
