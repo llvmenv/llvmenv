@@ -5,25 +5,47 @@ use reqwest;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use tempdir::TempDir;
 
 use error::*;
 
 #[derive(Debug)]
 pub enum Resource {
-    Svn {
-        url: String,
-        branch: Option<String>, // FIXME branch for SVN is not supported
-    },
-    Git {
-        url: String,
-        branch: Option<String>,
-    },
-    Tar {
-        url: String,
-    },
+    Svn { url: String },
+    Git { url: String, branch: Option<String> },
+    Tar { url: String },
 }
 
 impl Resource {
+    pub fn from_url(url_str: &str) -> Result<Self> {
+        // Check file extension
+        if let Ok(filename) = get_filename_from_url(url_str) {
+            for ext in &[".tar.gz", ".tar.xz", ".tar.bz2", ".tar.Z", ".tgz", ".taz"] {
+                if filename.ends_with(ext) {
+                    return Ok(Resource::Tar {
+                        url: url_str.into(),
+                    });
+                }
+            }
+        }
+        // Check git
+        let tmp_dir = TempDir::new("llvmenv-detect-git")?;
+        match Command::new("git")
+            .args(&["clone", "--depth=1"])
+            .arg(url_str)
+            .current_dir(tmp_dir.path())
+            .check_run()
+        {
+            Ok(_) => Ok(Resource::Git {
+                url: url_str.into(),
+                branch: None,
+            }),
+            Err(_) => Ok(Resource::Svn {
+                url: url_str.into(),
+            }),
+        }
+    }
+
     pub fn download(&self, dest: &Path) -> Result<()> {
         if !dest.is_dir() {
             return Err(err_msg("Download destination must be a directory"));
@@ -40,7 +62,10 @@ impl Resource {
                 if let Some(branch) = branch {
                     git.args(&["-b", branch]);
                 }
-                git.current_dir(dest).check_run()?;
+                git.current_dir(dest)
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null())
+                    .check_run()?;
             }
             Resource::Tar { url } => {
                 let path = download_file(url, &dest)?;
@@ -82,10 +107,49 @@ mod tests {
     use super::*;
     use tempdir::TempDir;
 
+    #[test]
+    fn parse_tar_url() -> Result<()> {
+        let tar_url = "http://releases.llvm.org/6.0.1/llvm-6.0.1.src.tar.xz";
+        match Resource::from_url(tar_url)? {
+            Resource::Tar { url } => {
+                assert_eq!(url, tar_url);
+            }
+            _ => unreachable!("Invalid detection"),
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn parse_svn_url() -> Result<()> {
+        let svn_url = "http://llvm.org/svn/llvm-project/llvm/trunk";
+        match Resource::from_url(svn_url)? {
+            Resource::Svn { url } => {
+                assert_eq!(url, svn_url);
+            }
+            _ => unreachable!("Invalid detection"),
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn parse_git_url() -> Result<()> {
+        let git_url = "http://github.com/termoshtt/llvmenv";
+        match Resource::from_url(git_url)? {
+            Resource::Git { url, branch: _ } => {
+                assert_eq!(url, git_url);
+            }
+            _ => unreachable!("Invalid detection"),
+        }
+        Ok(())
+    }
+
     // Test donwloading this repo
     #[test]
     fn test_git_donwload() -> Result<()> {
-        let git = Resource::Git("http://github.com/termoshtt/llvmenv".into(), None);
+        let git = Resource::Git {
+            url: "http://github.com/termoshtt/llvmenv".into(),
+            branch: None,
+        };
         let tmp_dir = TempDir::new("git_download_test")?;
         git.download(tmp_dir.path())?;
         let top = tmp_dir.path().join("llvmenv");
@@ -95,8 +159,9 @@ mod tests {
 
     #[test]
     fn test_tar_download() -> Result<()> {
-        let url = "https://github.com/termoshtt/llvmenv/archive/0.1.10.tar.gz".into();
-        let tar = Resource::Tar(url);
+        let tar = Resource::Tar {
+            url: "https://github.com/termoshtt/llvmenv/archive/0.1.10.tar.gz".into(),
+        };
         let tmp_dir = TempDir::new("tar_download_test")?;
         tar.download(tmp_dir.path())?;
         let top = tmp_dir.path().join("llvmenv-0.1.10");
@@ -106,11 +171,8 @@ mod tests {
 
     #[test]
     fn test_get_filename_from_url() {
-        let url = "http://releases.llvm.org/6.0.1/llvm-6.0.1.src.tar.xz".into();
-        assert_eq!(
-            get_filename_from_url(&url).unwrap(),
-            "llvm-6.0.1.src.tar.xz"
-        );
+        let url = "http://releases.llvm.org/6.0.1/llvm-6.0.1.src.tar.xz";
+        assert_eq!(get_filename_from_url(url).unwrap(), "llvm-6.0.1.src.tar.xz");
     }
 
 }

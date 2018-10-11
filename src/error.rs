@@ -22,6 +22,8 @@ impl CheckRun for process::Command {
     fn check_run(&mut self) -> CommandResult {
         let cmd = format!("{:?}", self);
         let st = self
+            .stdout(process::Stdio::null())
+            .stderr(process::Stdio::null())
             .status()
             .map_err(|_| CommandError::CommandNotFound { cmd: cmd.clone() })?;
         match st.code() {
