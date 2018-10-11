@@ -92,12 +92,29 @@ impl Build {
         Ok(())
     }
 
+    // Use clang --version command
+    //
+    // ```
+    // $ clang --version
+    // clang version 7.0.0 (tags/RELEASE_700/final)  # parse this line
+    // Target: x86_64-pc-linux-gnu
+    // Thread model: posix
+    // InstalledDir: /usr/bin
+    // ```
     pub fn version(&self) -> Result<(u32, u32, u32)> {
-        let output = Command::new(self.prefix().join("bin").join("llvm-config"))
+        let output = Command::new(self.prefix().join("bin").join("clang"))
             .arg("--version")
-            .output()?;
+            .output()
+            .map_err(|_| {
+                err_msg(format!(
+                    "{}/bin/clang is not found",
+                    self.prefix().display()
+                ))
+            })?;
         let output = ::std::str::from_utf8(&output.stdout)?;
-        let v = output
+        let first_line = output.split("\n").next().unwrap();
+        let version_str = first_line.split(" ").nth(2).unwrap().trim();
+        let v = version_str
             .split(".")
             .map(|s| {
                 s.trim()
