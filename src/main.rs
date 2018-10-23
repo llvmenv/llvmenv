@@ -13,6 +13,7 @@ extern crate dirs;
 extern crate env_logger;
 extern crate glob;
 extern crate num_cpus;
+extern crate regex;
 extern crate reqwest;
 extern crate tempfile;
 
