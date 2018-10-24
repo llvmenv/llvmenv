@@ -11,6 +11,8 @@ license       = "MIT"
 readme        = "README.md"
 categories    = []
 
+edition = '2018'
+
 [dependencies]
 dirs = "1.0"
 env_logger = "0.5"
