@@ -3,6 +3,8 @@ extern crate structopt;
 extern crate env_logger;
 extern crate llvmenv;
 extern crate num_cpus;
+extern crate reqwest;
+extern crate tempfile;
 
 use llvmenv::*;
 
