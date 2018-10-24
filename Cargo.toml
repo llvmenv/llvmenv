@@ -1,6 +1,6 @@
 [package]
 name = "llvmenv"
-version = "0.1.11"
+version = "0.1.12"
 authors = ["Toshiki Teramura <toshiki.teramura@gmail.com>"]
 
 description   = "Manage LLVM/Clang builds"
