@@ -1,16 +1,18 @@
 //! Manage entries, i.e. LLVM/Clang source to be built
 
-use failure::err_msg;
+use failure::{err_msg, Fail};
 use itertools::Itertools;
+use log::info;
 use reqwest;
+use serde_derive::Deserialize;
 use std::collections::HashMap;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::{fs, process};
 use toml;
 
-use config::*;
-use error::*;
+use crate::config::*;
+use crate::error::*;
 
 /// An entry to be built.
 #[derive(Debug)]
@@ -90,7 +92,7 @@ impl Entry {
             // clone/checkout
             match self.llvm {
                 LLVM::SVN(ref url, ref _branch) => {
-                    process::Command::new("svn")  // TODO support branch in SVN
+                    process::Command::new("svn") // TODO support branch in SVN
                         .args(&["co", url.as_str()])
                         .arg(&self.name)
                         .current_dir(cache_dir())

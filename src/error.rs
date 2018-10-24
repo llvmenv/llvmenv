@@ -1,4 +1,4 @@
-use failure::Error;
+use failure::{Error, Fail};
 use std::process;
 
 pub type Result<T> = ::std::result::Result<T, Error>;

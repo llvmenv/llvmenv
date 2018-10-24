@@ -1,9 +1,10 @@
 use dirs;
+use log::info;
 use std::io::Write;
 use std::path::PathBuf;
 use std::{env, fs};
 
-use error::Result;
+use crate::error::Result;
 
 pub const APP_NAME: &'static str = "llvmenv";
 pub const ENTRY_TOML: &'static str = "entry.toml";

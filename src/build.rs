@@ -1,15 +1,16 @@
 //! Manage LLVM/Clang builds
 
-use failure::err_msg;
+use failure::{err_msg, format_err};
 use glob::glob;
+use log::*;
 use regex::Regex;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::{env, fs};
 
-use config::*;
-use error::*;
+use crate::config::*;
+use crate::error::*;
 
 const LLVMENV_FN: &'static str = ".llvmenv";
 
