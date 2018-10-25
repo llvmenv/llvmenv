@@ -23,13 +23,24 @@ impl Resource {
         if let Ok(filename) = get_filename_from_url(url_str) {
             for ext in &[".tar.gz", ".tar.xz", ".tar.bz2", ".tar.Z", ".tgz", ".taz"] {
                 if filename.ends_with(ext) {
+                    info!("Find archive extension '{}' at the end of URL", ext);
                     return Ok(Resource::Tar {
                         url: url_str.into(),
                     });
                 }
             }
+
+            if filename.ends_with("trunk") {
+                info!("Find 'trunk' at the end of URL");
+                return Ok(Resource::Svn {
+                    url: url_str.into(),
+                });
+            }
         }
-        // Check git
+        // Try access with git
+        // - SVN repository cannot handle git access
+        // - Some Git service (e.g. GitHub) *can* handle svn access
+        info!("Try access with git to {}", url_str);
         let tmp_dir = TempDir::new("llvmenv-detect-git")?;
         match Command::new("git")
             .args(&["clone", "--depth=1"])
@@ -37,13 +48,19 @@ impl Resource {
             .current_dir(tmp_dir.path())
             .check_run()
         {
-            Ok(_) => Ok(Resource::Git {
-                url: url_str.into(),
-                branch: None,
-            }),
-            Err(_) => Ok(Resource::Svn {
-                url: url_str.into(),
-            }),
+            Ok(_) => {
+                info!("Git access succeeds");
+                Ok(Resource::Git {
+                    url: url_str.into(),
+                    branch: None,
+                })
+            }
+            Err(_) => {
+                info!("Git access failed. Regarded as a SVN repository.");
+                Ok(Resource::Svn {
+                    url: url_str.into(),
+                })
+            }
         }
     }
 
