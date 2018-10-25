@@ -1,12 +1,12 @@
 //! Get LLVM/Clang source
 
 use failure::err_msg;
+use log::info;
 use reqwest;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use tempdir::TempDir;
-use log::info;
 
 use crate::error::*;
 
