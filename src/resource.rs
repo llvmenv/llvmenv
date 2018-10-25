@@ -6,8 +6,9 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use tempdir::TempDir;
+use log::info;
 
-use error::*;
+use crate::error::*;
 
 #[derive(Debug)]
 pub enum Resource {
