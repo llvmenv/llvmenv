@@ -124,7 +124,7 @@ impl Build {
         let minor = cap[2]
             .parse()
             .map_err(|e| format_err!("Fail to parse minor version: {:?}", e))?;
-        let patch = cap[2]
+        let patch = cap[3]
             .parse()
             .map_err(|e| format_err!("Fail to parse patch version: {:?}", e))?;
         Ok((major, minor, patch))
