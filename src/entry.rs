@@ -14,36 +14,26 @@ use toml;
 use crate::config::*;
 use crate::error::*;
 
-/// An entry to be built.
-#[derive(Debug)]
-pub struct Entry {
+/// LLVM Tools e.g. clang, compiler-rt, and so on.
+#[derive(Deserialize, Debug)]
+pub struct Tool {
     name: String,
-    llvm: LLVM,
-    clang: Clang,
-    build: String,
+    url: String,
+    branch: Option<String>,
+    path: Option<String>,
+}
+
+/// An entry to be built.
+#[derive(Deserialize, Debug)]
+pub struct Entry {
+    url: String,
+    tools: Option<Vec<Tool>>,
     prefix: PathBuf,
     target: Vec<String>, // empty means all target
-    example: u32,
-    document: u32,
+    option: HashMap<String, String>,
 }
 
-pub type URL = String;
-pub type Branch = String;
-
-#[derive(Debug)]
-pub enum LLVM {
-    SVN(URL, Branch),
-    Git(URL, Branch),
-    Tar(URL),
-}
-
-#[derive(Debug)]
-pub enum Clang {
-    SVN(URL, Branch),
-    Git(URL, Branch),
-    Tar(URL),
-    None,
-}
+type Entries = HashMap<String, Entry>;
 
 impl Entry {
     fn default_option(name: String, llvm: LLVM, clang: Clang) -> Self {
@@ -267,21 +257,6 @@ pub fn releases() -> Vec<Entry> {
         }).collect()
 }
 
-#[derive(Deserialize, Debug)]
-struct EntryParam {
-    llvm_git: Option<String>,
-    llvm_svn: Option<String>,
-    clang_git: Option<String>,
-    clang_svn: Option<String>,
-    llvm_branch: Option<String>,
-    clang_branch: Option<String>,
-    build: Option<String>,
-    prefix: Option<String>,
-    target: Option<Vec<String>>,
-    example: Option<u32>,
-    document: Option<u32>,
-}
-
 impl EntryParam {
     fn convert(self, name: &str) -> Result<Entry> {
         let name = name.into();
@@ -360,8 +335,6 @@ pub enum ParseError {
         git: String,
     },
 }
-
-type TOMLData = HashMap<String, EntryParam>;
 
 // small io wrapper to read TOML
 fn load_toml() -> Result<TOMLData> {
