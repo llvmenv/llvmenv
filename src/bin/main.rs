@@ -27,17 +27,6 @@ enum LLVMEnv {
         update: bool,
         #[structopt(short = "j", long = "nproc")]
         nproc: Option<usize>,
-        #[structopt(
-            long = "prefix",
-            parse(from_os_str),
-            help = "Overwrite prefix"
-        )]
-        prefix: Option<PathBuf>,
-        #[structopt(
-            long = "build",
-            help = "Overwrite cmake build setting (Debug/Release)"
-        )]
-        build: Option<String>,
     },
 
     #[structopt(name = "current", about = "Show the name of current build")]
@@ -120,27 +109,19 @@ fn main() -> error::Result<()> {
         LLVMEnv::Entries {} => {
             let entries = entry::load_entries()?;
             for entry in &entries {
-                println!("{}", entry.get_name());
+                println!("{}", entry.name());
             }
         }
         LLVMEnv::BuildEntry {
             name,
             update,
             nproc,
-            prefix,
-            build,
         } => {
             let mut entry = entry::load_entry(&name)?;
-            if let Some(prefix) = prefix {
-                entry.overwrite_prefix(&prefix);
-            }
             let nproc = nproc.unwrap_or(num_cpus::get());
             entry.checkout().unwrap();
             if update {
                 entry.fetch().unwrap();
-            }
-            if let Some(build) = build {
-                entry.overwrite_build(&build);
             }
             entry.build(nproc).unwrap();
         }
