@@ -1,5 +1,6 @@
 use llvmenv::*;
 
+use failure::bail;
 use std::env;
 use std::path::PathBuf;
 use std::process::exit;
@@ -107,9 +108,12 @@ fn main() -> error::Result<()> {
         }
 
         LLVMEnv::Entries {} => {
-            let entries = entry::load_entries()?;
-            for entry in &entries {
-                println!("{}", entry.name());
+            if let Ok(entries) = entry::load_entries() {
+                for entry in &entries {
+                    println!("{}", entry.name());
+                }
+            } else {
+                bail!("No entries. Please define entries in $XDG_CONFIG_HOME/llvmenv/entry.toml");
             }
         }
         LLVMEnv::BuildEntry {
