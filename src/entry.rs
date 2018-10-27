@@ -1,8 +1,8 @@
 //! Manage entries, i.e. LLVM/Clang source to be built
 
+use log::warn;
 use failure::bail;
 use itertools::*;
-use log::*;
 use serde_derive::Deserialize;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -89,31 +89,40 @@ pub enum Entry {
     },
 }
 
-fn load_entry_toml(toml_filename: &Path) -> Result<Vec<Entry>> {
-    type EntryTOML = HashMap<String, EntrySetting>;
-    let input: EntryTOML = toml::from_str(&fs::read_to_string(toml_filename)?)?;
-    let mut entries = Vec::new();
-    for (name, setting) in input {
+impl Entry {
+    fn parse_setting(name: &str, setting: EntrySetting) -> Result<Self> {
+        if setting.path.is_some() &&  setting.url.is_some() {
+            bail!("One of Path or URL are allowed");
+        }
         if let Some(path) = &setting.path {
-            entries.push(Entry::Local {
+            if setting.tools.len() > 0 {
+                warn!("'tools' must be used with URL, ignored");
+            }
+            return Ok(Entry::Local {
                 name: name.into(),
                 path: path.into(),
                 setting,
             });
-            continue;
         }
         if let Some(url) = &setting.url {
-            entries.push(Entry::Remote {
+            return Ok(Entry::Remote {
                 name: name.into(),
                 url: url.clone(),
                 tools: setting.tools.clone(),
                 setting,
             });
-            continue;
         }
-        warn!("Ignore entry: {}", name);
+        bail!("Path nor URL are not found: {}", name);
     }
-    Ok(entries)
+}
+
+fn load_entry_toml(toml_filename: &Path) -> Result<Vec<Entry>> {
+    let entries: HashMap<String, EntrySetting> =
+        toml::from_str(&fs::read_to_string(toml_filename)?)?;
+    entries
+        .into_iter()
+        .map(|(name, setting)| Entry::parse_setting(&name, setting))
+        .collect()
 }
 
 pub fn load_entries() -> Result<Vec<Entry>> {
@@ -235,6 +244,44 @@ impl Entry {
             opts.push(format!("-D{}={}", k, v));
         }
         process::Command::new("cmake").args(&opts).check_run()?;
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_setting() -> Result<()> {
+        let setting = EntrySetting {
+            url: None,
+            path: None,
+            tools: Default::default(),
+            option: Default::default(),
+            builder: Default::default(),
+            build_type: Default::default(),
+            target: Default::default(),
+        };
+        assert!(Entry::parse_setting("no_entry", setting).is_err());
+
+        let setting = EntrySetting {
+            url: Some("http://llvm.org/svn/llvm-project/llvm/trunk".into()),
+            path: Some("~/.config/llvmenv".into()),
+            tools: Default::default(),
+            option: Default::default(),
+            builder: Default::default(),
+            build_type: Default::default(),
+            target: Default::default(),
+        };
+        assert!(Entry::parse_setting("duplicated", setting).is_err());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_download() -> Result<()> {
+        //
         Ok(())
     }
 }
