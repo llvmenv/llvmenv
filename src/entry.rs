@@ -1,11 +1,11 @@
 //! Manage entries, i.e. LLVM/Clang source to be built
 
-use log::warn;
 use failure::bail;
 use itertools::*;
+use log::warn;
 use serde_derive::Deserialize;
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::{fs, process};
 use toml;
 
@@ -91,7 +91,7 @@ pub enum Entry {
 
 impl Entry {
     fn parse_setting(name: &str, setting: EntrySetting) -> Result<Self> {
-        if setting.path.is_some() &&  setting.url.is_some() {
+        if setting.path.is_some() && setting.url.is_some() {
             bail!("One of Path or URL are allowed");
         }
         if let Some(path) = &setting.path {
@@ -116,9 +116,8 @@ impl Entry {
     }
 }
 
-fn load_entry_toml(toml_filename: &Path) -> Result<Vec<Entry>> {
-    let entries: HashMap<String, EntrySetting> =
-        toml::from_str(&fs::read_to_string(toml_filename)?)?;
+fn load_entry_toml(toml_str: &str) -> Result<Vec<Entry>> {
+    let entries: HashMap<String, EntrySetting> = toml::from_str(toml_str)?;
     entries
         .into_iter()
         .map(|(name, setting)| Entry::parse_setting(&name, setting))
@@ -126,7 +125,8 @@ fn load_entry_toml(toml_filename: &Path) -> Result<Vec<Entry>> {
 }
 
 pub fn load_entries() -> Result<Vec<Entry>> {
-    load_entry_toml(&config_dir().join(ENTRY_TOML))
+    let global_toml = config_dir().join(ENTRY_TOML);
+    load_entry_toml(&fs::read_to_string(global_toml)?)
 }
 
 pub fn load_entry(name: &str) -> Result<Entry> {
@@ -279,9 +279,24 @@ mod tests {
         Ok(())
     }
 
+    const OFFICIAL_SVN: &str = r#"
+    [official_svn]
+    url = "http://llvm.org/svn/llvm-project/llvm/trunk"
+
+    [[official_svn.tools]]
+    name = "clang"
+    url = "http://llvm.org/svn/llvm-project/cfe/trunk"
+
+    [[official_svn.tools]]
+    name = "clang-extra"
+    url = "http://llvm.org/svn/llvm-project/clang-tools-extra/trunk"
+    relative_path = "tools/clang/tools/extra"
+    "#;
+
     #[test]
-    fn test_download() -> Result<()> {
-        //
+    fn test_parse_toml() -> Result<()> {
+        let entries = load_entry_toml(OFFICIAL_SVN)?;
+        assert_eq!(entries.len(), 1);
         Ok(())
     }
 }

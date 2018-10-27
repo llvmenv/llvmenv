@@ -1,6 +1,6 @@
 //! Get LLVM/Clang source
 
-use failure::err_msg;
+use failure::{bail, err_msg};
 use log::info;
 use reqwest;
 use std::fs;
@@ -65,12 +65,18 @@ impl Resource {
     }
 
     pub fn download(&self, dest: &Path) -> Result<()> {
+        if !dest.exists() {
+            fs::create_dir_all(dest)?;
+        }
         if !dest.is_dir() {
-            return Err(err_msg("Download destination must be a directory"));
+            bail!(
+                "Download destination must be a directory: {}",
+                dest.display()
+            );
         }
         match self {
             Resource::Svn { url, .. } => Command::new("svn")
-                .args(&["co", url.as_str()])
+                .args(&["co", url.as_str(), "-r", "HEAD"])
                 .arg(dest)
                 .check_run()?,
             Resource::Git { url, branch } => {
