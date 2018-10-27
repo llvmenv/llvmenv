@@ -117,11 +117,11 @@ fn main() -> error::Result<()> {
             update,
             nproc,
         } => {
-            let mut entry = entry::load_entry(&name)?;
+            let entry = entry::load_entry(&name)?;
             let nproc = nproc.unwrap_or(num_cpus::get());
             entry.checkout().unwrap();
             if update {
-                entry.fetch().unwrap();
+                entry.update().unwrap();
             }
             entry.build(nproc).unwrap();
         }

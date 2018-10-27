@@ -1,16 +1,17 @@
 //! Manage entries, i.e. LLVM/Clang source to be built
 
+use failure::bail;
 use itertools::*;
 use log::*;
 use serde_derive::Deserialize;
 use std::collections::HashMap;
-use std::path::{PathBuf, Path};
+use std::path::{Path, PathBuf};
 use std::{fs, process};
-use failure::bail;
 use toml;
 
 use crate::config::*;
 use crate::error::*;
+use crate::resource::Resource;
 
 #[derive(Deserialize, Debug)]
 enum Builder {
@@ -43,6 +44,15 @@ pub struct Tool {
     url: String,
     branch: Option<String>,
     relative_path: Option<String>,
+}
+
+impl Tool {
+    fn rel_path(&self) -> String {
+        match self.relative_path {
+            Some(ref rel_path) => rel_path.to_string(),
+            None => format!("tools/{}", self.name),
+        }
+    }
 }
 
 /// Setting for both Remote and Local entries
@@ -114,7 +124,7 @@ pub fn load_entry(name: &str) -> Result<Entry> {
     let entries = load_entries()?;
     for entry in entries {
         if entry.name() == name {
-            return Ok(entry)
+            return Ok(entry);
         }
     }
     bail!("No entries are found: {}", name);
@@ -126,6 +136,40 @@ impl Entry {
             Entry::Remote { setting, .. } => setting,
             Entry::Local { setting, .. } => setting,
         }
+    }
+
+    pub fn checkout(&self) -> Result<()> {
+        match self {
+            Entry::Remote { url, tools, .. } => {
+                let src = Resource::from_url(url)?;
+                src.download(&self.src_dir())?;
+                for tool in tools {
+                    let src = Resource::from_url(&tool.url)?;
+                    src.download(&self.src_dir().join(tool.rel_path()))?;
+                }
+            }
+            Entry::Local { path, .. } => {
+                if !path.is_dir() {
+                    bail!("Path '{}' is not a directory", path.display())
+                }
+            }
+        }
+        Ok(())
+    }
+
+    pub fn update(&self) -> Result<()> {
+        match self {
+            Entry::Remote { url, tools, .. } => {
+                let src = Resource::from_url(url)?;
+                src.update(&self.src_dir())?;
+                for tool in tools {
+                    let src = Resource::from_url(&tool.url)?;
+                    src.update(&self.src_dir().join(tool.rel_path()))?;
+                }
+            }
+            Entry::Local { .. } => {}
+        }
+        Ok(())
     }
 
     pub fn name(&self) -> &str {

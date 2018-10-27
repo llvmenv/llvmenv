@@ -93,6 +93,21 @@ impl Resource {
         }
         Ok(())
     }
+
+    pub fn update(&self, dest: &Path) -> Result<()> {
+        match self {
+            Resource::Svn { .. } => Command::new("svn")
+                .arg("update")
+                .current_dir(dest)
+                .check_run()?,
+            Resource::Git { .. } => Command::new("git")
+                .arg("pull")
+                .current_dir(dest)
+                .check_run()?,
+            Resource::Tar { .. } => {}
+        }
+        Ok(())
+    }
 }
 
 fn get_filename_from_url(url_str: &str) -> Result<String> {
