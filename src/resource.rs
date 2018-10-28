@@ -146,11 +146,16 @@ impl Resource {
                 git.check_run()?;
             }
             Resource::Tar { url } => {
+                info!("Download Tar file: {}", url);
                 let working = TempDir::new_in(cache_dir())?;
-                let tmp_path = download_file(url, working.path())?;
+                let filename = get_filename_from_url(url)?;
+                let path = dest.join(&filename);
+                let mut req = reqwest::get(url)?;
+                let mut f = fs::File::create(&path)?;
+                req.copy_to(&mut f)?;
                 Command::new("tar")
                     .arg("xf")
-                    .arg(tmp_path)
+                    .arg(filename)
                     .current_dir(&working)
                     .check_run()?;
                 let d = fs::read_dir(&working)?
@@ -186,15 +191,6 @@ fn get_filename_from_url(url_str: &str) -> Result<String> {
     let seg = url.path_segments().ok_or(err_msg("URL parse failed"))?;
     let filename = seg.last().ok_or(err_msg("URL is invalid"))?;
     Ok(filename.to_string())
-}
-
-fn download_file(url: &str, dest: &Path) -> Result<PathBuf> {
-    info!("Download: {}", url);
-    let path = dest.join(get_filename_from_url(url)?);
-    let mut req = reqwest::get(url)?;
-    let mut f = fs::File::create(&path)?;
-    req.copy_to(&mut f)?;
-    Ok(path)
 }
 
 #[cfg(test)]
