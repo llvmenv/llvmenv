@@ -149,7 +149,7 @@ impl Resource {
                 info!("Download Tar file: {}", url);
                 let working = TempDir::new_in(cache_dir())?;
                 let filename = get_filename_from_url(url)?;
-                let path = dest.join(&filename);
+                let path = working.path().join(&filename);
                 let mut req = reqwest::get(url)?;
                 let mut f = fs::File::create(&path)?;
                 req.copy_to(&mut f)?;
