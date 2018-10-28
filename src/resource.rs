@@ -4,11 +4,12 @@ use failure::{bail, err_msg};
 use log::info;
 use reqwest;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::*;
 use std::process::Command;
-use tempdir::TempDir;
+use tempfile::TempDir;
 use url::Url;
 
+use crate::config::*;
 use crate::error::*;
 
 #[derive(Debug)]
@@ -86,7 +87,7 @@ impl Resource {
         // git ls-remote       # This must fail for SVN repo
         // ```
         info!("Try access with git to {}", url_str);
-        let tmp_dir = TempDir::new("llvmenv-detect-git")?;
+        let tmp_dir = TempDir::new()?;
         Command::new("git")
             .arg("init")
             .current_dir(tmp_dir.path())
@@ -145,12 +146,20 @@ impl Resource {
                 git.check_run()?;
             }
             Resource::Tar { url } => {
-                let path = download_file(url, &dest)?;
+                let working = TempDir::new_in(cache_dir())?;
+                let tmp_path = download_file(url, working.path())?;
                 Command::new("tar")
                     .arg("xf")
-                    .arg(path.file_name().unwrap())
-                    .current_dir(dest)
+                    .arg(tmp_path)
+                    .current_dir(&working)
                     .check_run()?;
+                let d = fs::read_dir(&working)?
+                    .map(|d| d.unwrap())
+                    .filter(|d| d.file_type().unwrap().is_dir())
+                    .nth(0)
+                    .expect("Archive does not contains file");
+                println!("From = {}, To = {}", d.path().display(), dest.display());
+                fs::rename(d.path(), dest)?;
             }
         }
         Ok(())
@@ -179,25 +188,18 @@ fn get_filename_from_url(url_str: &str) -> Result<String> {
     Ok(filename.to_string())
 }
 
-fn download_file(url: &str, temp: &Path) -> Result<PathBuf> {
+fn download_file(url: &str, dest: &Path) -> Result<PathBuf> {
     info!("Download: {}", url);
+    let path = dest.join(get_filename_from_url(url)?);
     let mut req = reqwest::get(url)?;
-    let out = if temp.is_dir() {
-        let name = get_filename_from_url(url)?;
-        temp.join(name)
-    } else {
-        temp.into()
-    };
-    let mut f = fs::File::create(&out)?;
+    let mut f = fs::File::create(&path)?;
     req.copy_to(&mut f)?;
-    f.sync_all()?;
-    Ok(out)
+    Ok(path)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempdir::TempDir;
 
     #[test]
     fn parse_tar_url() -> Result<()> {
@@ -242,7 +244,7 @@ mod tests {
             url: "http://github.com/termoshtt/llvmenv".into(),
             branch: None,
         };
-        let tmp_dir = TempDir::new("git_download_test")?;
+        let tmp_dir = TempDir::new()?;
         git.download(tmp_dir.path())?;
         let cargo_toml = tmp_dir.path().join("Cargo.toml");
         assert!(cargo_toml.exists());
@@ -254,7 +256,7 @@ mod tests {
         let tar = Resource::Tar {
             url: "https://github.com/termoshtt/llvmenv/archive/0.1.10.tar.gz".into(),
         };
-        let tmp_dir = TempDir::new("tar_download_test")?;
+        let tmp_dir = TempDir::new_in(cache_dir())?;
         tar.download(tmp_dir.path())?;
         let cargo_toml = tmp_dir.path().join("Cargo.toml");
         assert!(cargo_toml.exists());
