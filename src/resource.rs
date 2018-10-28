@@ -138,11 +138,11 @@ impl Resource {
             Resource::Git { url, branch } => {
                 info!("Git clone {}", url);
                 let mut git = Command::new("git");
-                git.args(&["clone", url.as_str(), "--depth", "1"]);
+                git.args(&["clone", url.as_str(), "--depth", "1"]).arg(dest);
                 if let Some(branch) = branch {
                     git.args(&["-b", branch]);
                 }
-                git.current_dir(dest).check_run()?;
+                git.check_run()?;
             }
             Resource::Tar { url } => {
                 let path = download_file(url, &dest)?;
@@ -244,8 +244,8 @@ mod tests {
         };
         let tmp_dir = TempDir::new("git_download_test")?;
         git.download(tmp_dir.path())?;
-        let top = tmp_dir.path().join("llvmenv");
-        assert!(top.is_dir());
+        let cargo_toml = tmp_dir.path().join("Cargo.toml");
+        assert!(cargo_toml.exists());
         Ok(())
     }
 
@@ -256,8 +256,8 @@ mod tests {
         };
         let tmp_dir = TempDir::new("tar_download_test")?;
         tar.download(tmp_dir.path())?;
-        let top = tmp_dir.path().join("llvmenv-0.1.10");
-        assert!(top.is_dir());
+        let cargo_toml = tmp_dir.path().join("Cargo.toml");
+        assert!(cargo_toml.exists());
         Ok(())
     }
 

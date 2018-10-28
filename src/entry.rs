@@ -150,11 +150,16 @@ impl Entry {
     pub fn checkout(&self) -> Result<()> {
         match self {
             Entry::Remote { url, tools, .. } => {
-                let src = Resource::from_url(url)?;
-                src.download(&self.src_dir())?;
+                if !self.src_dir().is_dir() {
+                    let src = Resource::from_url(url)?;
+                    src.download(&self.src_dir())?;
+                }
                 for tool in tools {
-                    let src = Resource::from_url(&tool.url)?;
-                    src.download(&self.src_dir().join(tool.rel_path()))?;
+                    let path = self.src_dir().join(tool.rel_path());
+                    if !path.is_dir() {
+                        let src = Resource::from_url(&tool.url)?;
+                        src.download(&path)?;
+                    }
                 }
             }
             Entry::Local { path, .. } => {

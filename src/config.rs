@@ -1,9 +1,9 @@
 use dirs;
+use failure::bail;
 use log::info;
 use std::io::Write;
 use std::path::PathBuf;
 use std::{env, fs};
-use failure::bail;
 
 use crate::error::Result;
 
@@ -24,7 +24,6 @@ name = "clang-extra"
 url = "https://github.com/llvm-mirror/clang-tools-extra"
 relative_path = "tools/clang/tools/extra"
 "#;
-
 
 pub fn config_dir() -> PathBuf {
     let home = match env::var("XDG_CONFIG_HOME") {
