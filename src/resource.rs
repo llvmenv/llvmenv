@@ -7,6 +7,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use tempdir::TempDir;
+use url::Url;
 
 use crate::error::*;
 
@@ -36,16 +37,71 @@ impl Resource {
                     url: url_str.into(),
                 });
             }
+
+            if filename.ends_with(".git") {
+                info!("Find '.git' extension");
+                return Ok(Resource::Git {
+                    url: url_str.into(),
+                    branch: None,
+                });
+            }
         }
+
+        // Hostname
+        let url = Url::parse(url_str)?;
+        for service in &["github.com", "gitlab.com"] {
+            if url.host_str() == Some(service) {
+                info!("URL is a cloud git service: {}", service);
+                return Ok(Resource::Git {
+                    url: url_str.into(),
+                    branch: None,
+                });
+            }
+        }
+
+        if url.host_str() == Some("llvm.org") {
+            if url.path().starts_with("/svn") {
+                info!("URL is LLVM SVN repository");
+                return Ok(Resource::Svn {
+                    url: url_str.into(),
+                });
+            }
+            if url.path().starts_with("/git") {
+                info!("URL is LLVM Git repository");
+                return Ok(Resource::Git {
+                    url: url_str.into(),
+                    branch: None,
+                });
+            }
+        }
+
         // Try access with git
+        //
         // - SVN repository cannot handle git access
         // - Some Git service (e.g. GitHub) *can* handle svn access
+        //
+        // ```
+        // git init
+        // git remote add $url
+        // git ls-remote       # This must fail for SVN repo
+        // ```
         info!("Try access with git to {}", url_str);
         let tmp_dir = TempDir::new("llvmenv-detect-git")?;
-        match Command::new("git")
-            .args(&["clone", "--depth=1"])
+        Command::new("git")
+            .arg("init")
+            .current_dir(tmp_dir.path())
+            .silent()
+            .check_run()?;
+        Command::new("git")
+            .args(&["remote", "add", "origin"])
             .arg(url_str)
             .current_dir(tmp_dir.path())
+            .silent()
+            .check_run()?;
+        match Command::new("git")
+            .args(&["ls-remote"])
+            .current_dir(tmp_dir.path())
+            .silent()
             .check_run()
         {
             Ok(_) => {
@@ -82,7 +138,7 @@ impl Resource {
             Resource::Git { url, branch } => {
                 info!("Git clone {}", url);
                 let mut git = Command::new("git");
-                git.args(&["clone", url.as_str()]);
+                git.args(&["clone", url.as_str(), "--depth", "1"]);
                 if let Some(branch) = branch {
                     git.args(&["-b", branch]);
                 }

@@ -14,16 +14,19 @@ pub enum CommandError {
     TerminatedBySignal { cmd: String },
 }
 
-pub trait CheckRun {
+pub trait CommandExt {
+    fn silent(&mut self) -> &mut Self;
     fn check_run(&mut self) -> CommandResult;
 }
 
-impl CheckRun for process::Command {
+impl CommandExt for process::Command {
+    fn silent(&mut self) -> &mut Self {
+        self.stdout(process::Stdio::null())
+            .stderr(process::Stdio::null())
+    }
     fn check_run(&mut self) -> CommandResult {
         let cmd = format!("{:?}", self);
         let st = self
-            .stdout(process::Stdio::null())
-            .stderr(process::Stdio::null())
             .status()
             .map_err(|_| CommandError::CommandNotFound { cmd: cmd.clone() })?;
         match st.code() {

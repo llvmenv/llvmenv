@@ -278,25 +278,4 @@ mod tests {
 
         Ok(())
     }
-
-    const OFFICIAL_SVN: &str = r#"
-    [official_svn]
-    url = "http://llvm.org/svn/llvm-project/llvm/trunk"
-
-    [[official_svn.tools]]
-    name = "clang"
-    url = "http://llvm.org/svn/llvm-project/cfe/trunk"
-
-    [[official_svn.tools]]
-    name = "clang-extra"
-    url = "http://llvm.org/svn/llvm-project/clang-tools-extra/trunk"
-    relative_path = "tools/clang/tools/extra"
-    "#;
-
-    #[test]
-    fn test_parse_toml() -> Result<()> {
-        let entries = load_entry_toml(OFFICIAL_SVN)?;
-        assert_eq!(entries.len(), 1);
-        Ok(())
-    }
 }
