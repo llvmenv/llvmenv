@@ -32,7 +32,11 @@ pub fn config_dir() -> PathBuf {
             .expect("$HOME does not found")
             .join(".config"), // Use $HOME/.config
     };
-    home.join(APP_NAME)
+    let path = home.join(APP_NAME);
+    if !path.exists() {
+        fs::create_dir_all(&path).expect(&format!("Cannot create configure at {}", path.display()));
+    }
+    path
 }
 
 pub fn cache_dir() -> PathBuf {
@@ -42,7 +46,14 @@ pub fn cache_dir() -> PathBuf {
             .expect("$HOME does not found")
             .join(".cache"), // Use $HOME/.cache
     };
-    home.join(APP_NAME)
+    let path = home.join(APP_NAME);
+    if !path.exists() {
+        fs::create_dir_all(&path).expect(&format!(
+            "Cannot create cache directory at {}",
+            path.display()
+        ));
+    }
+    path
 }
 
 pub fn data_dir() -> PathBuf {
@@ -53,7 +64,14 @@ pub fn data_dir() -> PathBuf {
             .join(".local")
             .join("share"), // Use $HOME/.local/share/llvmenv
     };
-    home.join(APP_NAME)
+    let path = home.join(APP_NAME);
+    if !path.exists() {
+        fs::create_dir_all(&path).expect(&format!(
+            "Cannot create data directory at {}",
+            path.display()
+        ));
+    }
+    path
 }
 
 /// Initialize configure directory `$XDG_CONFIG_HOME/llvmenv/`
