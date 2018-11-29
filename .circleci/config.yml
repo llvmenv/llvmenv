@@ -1,17 +1,17 @@
 version: 2
 jobs:
-  test:
+  cargo_test:
     docker:
-      - image: rust:1.25
+      - image: rust:latest
     steps:
       - checkout
       - run:
           name: cargo test
           command: |
             cargo test
-  check_init:
+  run_entries:
     docker:
-      - image: rust:1.25
+      - image: rust:latest
     steps:
       - checkout
       - run:
@@ -19,10 +19,24 @@ jobs:
           command: |
             cargo run init
             cargo run entries
+  run_build_entry:
+    docker:
+      - image: rust:latest
+    steps:
+      - checkout
+      - run:
+          name: Test building LLVM
+          command: |
+            cargo run -- init
+            cargo run -- build-entry llvm-mirror
 
 workflows:
   version: 2
   tests:
     jobs:
-      - test
-      - check_init
+      - cargo_test
+      - run_entries
+      - run_build_entry:
+          requires:
+            - cargo_test
+            - run_entries
