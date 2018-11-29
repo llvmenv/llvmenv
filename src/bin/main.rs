@@ -35,18 +35,12 @@ enum LLVMEnv {
         #[structopt(short = "v", long = "verbose")]
         verbose: bool,
     },
-    #[structopt(
-        name = "prefix",
-        about = "Show the prefix of the current build"
-    )]
+    #[structopt(name = "prefix", about = "Show the prefix of the current build")]
     Prefix {
         #[structopt(short = "v", long = "verbose")]
         verbose: bool,
     },
-    #[structopt(
-        name = "version",
-        about = "Show the base version of the current build"
-    )]
+    #[structopt(name = "version", about = "Show the base version of the current build")]
     Version {
         #[structopt(short = "n", long = "name")]
         name: Option<String>,
@@ -67,10 +61,7 @@ enum LLVMEnv {
         path: Option<PathBuf>,
     },
 
-    #[structopt(
-        name = "archive",
-        about = "archive build into *.tar.xz (require pixz)"
-    )]
+    #[structopt(name = "archive", about = "archive build into *.tar.xz (require pixz)")]
     Archive {
         name: String,
         #[structopt(short = "v", long = "verbose")]

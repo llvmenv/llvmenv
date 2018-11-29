@@ -143,7 +143,8 @@ fn local_builds() -> Result<Vec<Build>> {
             } else {
                 None
             }
-        }).collect())
+        })
+        .collect())
 }
 
 pub fn builds() -> Result<Vec<Build>> {

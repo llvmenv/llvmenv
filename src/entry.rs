@@ -218,7 +218,8 @@ impl Entry {
                 "install",
                 "-j",
                 &format!("{}", nproc),
-            ]).check_run()?;
+            ])
+            .check_run()?;
         Ok(())
     }
 
