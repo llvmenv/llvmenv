@@ -232,6 +232,7 @@ impl Entry {
                 &format!("{}", self.build_dir().display()),
                 "--target",
                 "install",
+                "--",
                 "-j",
                 &format!("{}", nproc),
             ])
