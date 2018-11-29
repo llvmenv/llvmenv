@@ -15,13 +15,29 @@ use crate::resource::Resource;
 
 #[derive(Deserialize, Debug)]
 enum Builder {
+    Platform, // Platform default
     Makefile,
     Ninja,
+    VisualStudio,
+}
+
+impl Builder {
+    fn option(&self) -> Vec<String> {
+        match self {
+            Builder::Platform => Vec::new(),
+            Builder::Makefile => vec!["-G", "Unix Makefiles"],
+            Builder::Ninja => vec!["-G", "Ninja"],
+            Builder::VisualStudio => vec!["-G", "Visual Studio 15 2017"],
+        }
+        .into_iter()
+        .map(|s| s.into())
+        .collect()
+    }
 }
 
 impl Default for Builder {
     fn default() -> Self {
-        Builder::Ninja
+        Builder::Platform
     }
 }
 
@@ -225,16 +241,9 @@ impl Entry {
 
     fn configure(&self) -> Result<()> {
         let setting = self.setting();
-        let mut opts = Vec::new();
+        let mut opts = setting.builder.option();
         opts.push(format!("-H{}", self.src_dir().display()));
         opts.push(format!("-B{}", self.build_dir().display()));
-        match setting.builder {
-            Builder::Ninja => {
-                opts.push("-G".into());
-                opts.push("Ninja".into());
-            }
-            _ => {}
-        }
         opts.push(format!(
             "-DCMAKE_INSTALL_PREFIX={}",
             data_dir().join(self.prefix()).display()
