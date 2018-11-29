@@ -25,6 +25,11 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Install cmake
+          command: |
+            apt update
+            apt install -y cmake
+      - run:
           name: Test building LLVM
           command: |
             cargo run -- init
