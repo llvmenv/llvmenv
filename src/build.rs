@@ -39,15 +39,15 @@ impl Build {
         }
     }
 
-    pub fn from_name(name: &str) -> Self {
+    pub fn from_name(name: &str) -> Result<Self> {
         if name == "system" {
-            return Self::system();
+            return Ok(Self::system());
         }
-        Build {
+        Ok(Build {
             name: name.into(),
-            prefix: data_dir().join(name),
+            prefix: data_dir()?.join(name),
             llvmenv: None,
-        }
+        })
     }
 
     pub fn exists(&self) -> bool {
@@ -70,7 +70,7 @@ impl Build {
     }
 
     pub fn set_global(&self) -> Result<()> {
-        self.set_local(&config_dir())
+        self.set_local(&config_dir()?)
     }
 
     pub fn set_local(&self, path: &Path) -> Result<()> {
@@ -88,9 +88,9 @@ impl Build {
             .arg(&filename)
             .arg("--use-compress-prog=pixz")
             .arg(&self.name)
-            .current_dir(data_dir())
+            .current_dir(data_dir()?)
             .check_run()?;
-        println!("{}", data_dir().join(filename).display());
+        println!("{}", data_dir()?.join(filename).display());
         Ok(())
     }
 
@@ -136,7 +136,7 @@ fn parse_version(version: &str) -> Result<(u32, u32, u32)> {
 }
 
 fn local_builds() -> Result<Vec<Build>> {
-    Ok(glob(&format!("{}/*/bin", data_dir().display()))?
+    Ok(glob(&format!("{}/*/bin", data_dir()?.display()))?
         .filter_map(|path| {
             if let Ok(path) = path {
                 path.parent().map(|path| Build::from_path(path))
@@ -163,7 +163,7 @@ fn load_local_env(path: &Path) -> Result<Option<Build>> {
     let mut s = String::new();
     f.read_to_string(&mut s)?;
     let name = s.trim();
-    let mut build = Build::from_name(name);
+    let mut build = Build::from_name(name)?;
     if build.exists() {
         build.llvmenv = Some(path.into());
         Ok(Some(build))
@@ -173,7 +173,7 @@ fn load_local_env(path: &Path) -> Result<Option<Build>> {
 }
 
 fn load_global_env() -> Result<Option<Build>> {
-    load_local_env(&config_dir())
+    load_local_env(&config_dir()?)
 }
 
 pub fn seek_build() -> Result<Build> {
@@ -191,7 +191,7 @@ pub fn seek_build() -> Result<Build> {
     }
     // check global setting
     if let Some(mut build) = load_global_env()? {
-        build.llvmenv = Some(config_dir().join(LLVMENV_FN));
+        build.llvmenv = Some(config_dir()?.join(LLVMENV_FN));
         return Ok(build);
     }
     Ok(Build::system())
@@ -207,7 +207,7 @@ pub fn expand(archive: &Path, verbose: bool) -> Result<()> {
     Command::new("tar")
         .arg(if verbose { "xvf" } else { "xf" })
         .arg(archive)
-        .current_dir(data_dir())
+        .current_dir(data_dir()?)
         .check_run()?;
     Ok(())
 }

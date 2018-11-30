@@ -150,7 +150,7 @@ fn load_entry_toml(toml_str: &str) -> Result<Vec<Entry>> {
 }
 
 pub fn load_entries() -> Result<Vec<Entry>> {
-    let global_toml = config_dir().join(ENTRY_TOML);
+    let global_toml = config_dir()?.join(ENTRY_TOML);
     load_entry_toml(&fs::read_to_string(global_toml)?)
 }
 
@@ -175,12 +175,12 @@ impl Entry {
     pub fn checkout(&self) -> Result<()> {
         match self {
             Entry::Remote { url, tools, .. } => {
-                if !self.src_dir().is_dir() {
+                if !self.src_dir()?.is_dir() {
                     let src = Resource::from_url(url)?;
-                    src.download(&self.src_dir())?;
+                    src.download(&self.src_dir()?)?;
                 }
                 for tool in tools {
-                    let path = self.src_dir().join(tool.rel_path());
+                    let path = self.src_dir()?.join(tool.rel_path());
                     if !path.is_dir() {
                         let src = Resource::from_url(&tool.url)?;
                         src.download(&path)?;
@@ -200,10 +200,10 @@ impl Entry {
         match self {
             Entry::Remote { url, tools, .. } => {
                 let src = Resource::from_url(url)?;
-                src.update(&self.src_dir())?;
+                src.update(&self.src_dir()?)?;
                 for tool in tools {
                     let src = Resource::from_url(&tool.url)?;
-                    src.update(&self.src_dir().join(tool.rel_path()))?;
+                    src.update(&self.src_dir()?.join(tool.rel_path()))?;
                 }
             }
             Entry::Local { .. } => {}
@@ -218,19 +218,19 @@ impl Entry {
         }
     }
 
-    pub fn src_dir(&self) -> PathBuf {
-        match self {
-            Entry::Remote { name, .. } => cache_dir().join(name),
+    pub fn src_dir(&self) -> Result<PathBuf> {
+        Ok(match self {
+            Entry::Remote { name, .. } => cache_dir()?.join(name),
             Entry::Local { path, .. } => path.into(),
-        }
+        })
     }
 
-    pub fn build_dir(&self) -> PathBuf {
-        self.src_dir().join("build")
+    pub fn build_dir(&self) -> Result<PathBuf> {
+        Ok(self.src_dir()?.join("build"))
     }
 
-    pub fn prefix(&self) -> PathBuf {
-        data_dir().join(self.name())
+    pub fn prefix(&self) -> Result<PathBuf> {
+        Ok(data_dir()?.join(self.name()))
     }
 
     pub fn build(&self, nproc: usize) -> Result<()> {
@@ -238,7 +238,7 @@ impl Entry {
         process::Command::new("cmake")
             .args(&[
                 "--build",
-                &format!("{}", self.build_dir().display()),
+                &format!("{}", self.build_dir()?.display()),
                 "--target",
                 "install",
             ])
@@ -250,11 +250,11 @@ impl Entry {
     fn configure(&self) -> Result<()> {
         let setting = self.setting();
         let mut opts = setting.builder.option();
-        opts.push(format!("-H{}", self.src_dir().display()));
-        opts.push(format!("-B{}", self.build_dir().display()));
+        opts.push(format!("-H{}", self.src_dir()?.display()));
+        opts.push(format!("-B{}", self.build_dir()?.display()));
         opts.push(format!(
             "-DCMAKE_INSTALL_PREFIX={}",
-            data_dir().join(self.prefix()).display()
+            data_dir()?.join(self.prefix()?).display()
         ));
         opts.push(format!("-DCMAKE_BUILD_TYPE={:?}", setting.build_type));
         if setting.target.len() > 0 {
