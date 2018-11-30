@@ -94,7 +94,7 @@ pub struct EntrySetting {
     /// URL of remote LLVM resource, see also [resouce](../resource/index.html) module
     pub url: Option<String>,
     /// Path of local LLVM source dir
-    pub path: Option<PathBuf>,
+    pub path: Option<String>,
     /// Additional LLVM Tools, e.g. clang, openmp, lld, and so on.
     #[serde(default)]
     pub tools: Vec<Tool>,
@@ -138,7 +138,7 @@ impl Entry {
             }
             return Ok(Entry::Local {
                 name: name.into(),
-                path: path.into(),
+                path: PathBuf::from(shellexpand::full(&path)?.to_string()),
                 setting,
             });
         }
