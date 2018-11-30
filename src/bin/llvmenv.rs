@@ -1,9 +1,10 @@
+use llvmenv::error::CommandExt;
 use llvmenv::*;
 
 use failure::bail;
 use std::env;
 use std::path::PathBuf;
-use std::process::exit;
+use std::process::{exit, Command};
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
@@ -74,6 +75,9 @@ enum LLVMEnv {
         #[structopt(short = "v", long = "verbose")]
         verbose: bool,
     },
+
+    #[structopt(name = "edit", about = "Edit llvmenv configure in your editor")]
+    Edit {},
 
     #[structopt(name = "zsh", about = "Setup Zsh integration")]
     Zsh {},
@@ -183,6 +187,13 @@ fn main() -> error::Result<()> {
         }
         LLVMEnv::Expand { path, verbose } => {
             build::expand(&path, verbose)?;
+        }
+
+        LLVMEnv::Edit {} => {
+            let editor = env::var("EDITOR").expect("EDITOR environmental value is not set");
+            Command::new(editor)
+                .arg(config::config_dir()?.join(config::ENTRY_TOML))
+                .check_run()?;
         }
 
         LLVMEnv::Zsh {} => {
