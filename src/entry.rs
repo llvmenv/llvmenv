@@ -14,7 +14,7 @@ use crate::error::*;
 use crate::resource::Resource;
 
 #[derive(Deserialize, Debug)]
-enum Builder {
+pub enum Builder {
     Platform, // Platform default
     Makefile,
     Ninja,
@@ -50,8 +50,9 @@ impl Default for Builder {
     }
 }
 
+/// CMake build type
 #[derive(Deserialize, Debug)]
-enum BuildType {
+pub enum BuildType {
     Debug,
     Release,
 }
@@ -83,20 +84,20 @@ impl Tool {
 /// Setting for both Remote and Local entries
 #[derive(Deserialize, Debug)]
 pub struct EntrySetting {
-    url: Option<String>,
-    path: Option<PathBuf>,
+    pub url: Option<String>,
+    pub path: Option<PathBuf>,
     #[serde(default)]
-    tools: Vec<Tool>,
+    pub tools: Vec<Tool>,
     /// empty means all backend
     #[serde(default)]
-    target: Vec<String>,
+    pub target: Vec<String>,
     /// other LLVM build options
     #[serde(default)]
-    option: HashMap<String, String>,
+    pub option: HashMap<String, String>,
     #[serde(default)]
-    builder: Builder,
+    pub builder: Builder,
     #[serde(default)]
-    build_type: BuildType,
+    pub build_type: BuildType,
 }
 
 #[derive(Debug)]
