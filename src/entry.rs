@@ -2,7 +2,7 @@
 
 use failure::bail;
 use itertools::*;
-use log::warn;
+use log::{info, warn};
 use serde_derive::Deserialize;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -94,7 +94,7 @@ pub struct EntrySetting {
     /// URL of remote LLVM resource, see also [resouce](../resource/index.html) module
     pub url: Option<String>,
     /// Path of local LLVM source dir
-    pub path: Option<PathBuf>,
+    pub path: Option<String>,
     /// Additional LLVM Tools, e.g. clang, openmp, lld, and so on.
     #[serde(default)]
     pub tools: Vec<Tool>,
@@ -138,7 +138,7 @@ impl Entry {
             }
             return Ok(Entry::Local {
                 name: name.into(),
-                path: path.into(),
+                path: PathBuf::from(shellexpand::full(&path)?.to_string()),
                 setting,
             });
         }
@@ -239,7 +239,12 @@ impl Entry {
     }
 
     pub fn build_dir(&self) -> Result<PathBuf> {
-        Ok(self.src_dir()?.join("build"))
+        let dir = self.src_dir()?.join("build");
+        if !dir.exists() {
+            info!("Create build dir: {}", dir.display());
+            fs::create_dir_all(&dir)?;
+        }
+        Ok(dir)
     }
 
     pub fn prefix(&self) -> Result<PathBuf> {
@@ -260,11 +265,15 @@ impl Entry {
         Ok(())
     }
 
+    pub fn clean(&self) -> Result<()> {
+        fs::remove_dir_all(self.build_dir()?)?;
+        Ok(())
+    }
+
     fn configure(&self) -> Result<()> {
         let setting = self.setting();
         let mut opts = setting.builder.option();
-        opts.push(format!("-H{}", self.src_dir()?.display()));
-        opts.push(format!("-B{}", self.build_dir()?.display()));
+        opts.push(format!("{}", self.src_dir()?.display()));
         opts.push(format!(
             "-DCMAKE_INSTALL_PREFIX={}",
             data_dir()?.join(self.prefix()?).display()
@@ -279,7 +288,10 @@ impl Entry {
         for (k, v) in &setting.option {
             opts.push(format!("-D{}={}", k, v));
         }
-        process::Command::new("cmake").args(&opts).check_run()?;
+        process::Command::new("cmake")
+            .args(&opts)
+            .current_dir(self.build_dir()?)
+            .check_run()?;
         Ok(())
     }
 }
