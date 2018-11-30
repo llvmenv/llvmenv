@@ -114,21 +114,25 @@ impl Build {
                 ))
             })?;
         let output = ::std::str::from_utf8(&output.stdout)?;
-        let cap = Regex::new(r"(\d).(\d).(\d)")
-            .unwrap()
-            .captures(output)
-            .ok_or(err_msg("Failed to parse $(clang --version) output"))?;
-        let major = cap[1]
-            .parse()
-            .map_err(|e| format_err!("Fail to parse major version: {:?}", e))?;
-        let minor = cap[2]
-            .parse()
-            .map_err(|e| format_err!("Fail to parse minor version: {:?}", e))?;
-        let patch = cap[3]
-            .parse()
-            .map_err(|e| format_err!("Fail to parse patch version: {:?}", e))?;
-        Ok((major, minor, patch))
+        parse_version(output)
     }
+}
+
+fn parse_version(version: &str) -> Result<(u32, u32, u32)> {
+    let cap = Regex::new(r"(\d).(\d).(\d)")
+        .unwrap()
+        .captures(version)
+        .ok_or(err_msg("Failed to parse $(clang --version) output"))?;
+    let major = cap[1]
+        .parse()
+        .map_err(|e| format_err!("Fail to parse major version: {:?}", e))?;
+    let minor = cap[2]
+        .parse()
+        .map_err(|e| format_err!("Fail to parse minor version: {:?}", e))?;
+    let patch = cap[3]
+        .parse()
+        .map_err(|e| format_err!("Fail to parse patch version: {:?}", e))?;
+    Ok((major, minor, patch))
 }
 
 fn local_builds() -> Result<Vec<Build>> {
@@ -139,7 +143,8 @@ fn local_builds() -> Result<Vec<Build>> {
             } else {
                 None
             }
-        }).collect())
+        })
+        .collect())
 }
 
 pub fn builds() -> Result<Vec<Build>> {
@@ -205,4 +210,21 @@ pub fn expand(archive: &Path, verbose: bool) -> Result<()> {
         .current_dir(data_dir())
         .check_run()?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_version() -> Result<()> {
+        // https://github.com/termoshtt/llvmenv/issues/36
+        let version =
+            "clang version 6.0.1-svn331815-1~exp1~20180510084719.80 (branches/release_60)";
+        let (major, minor, patch) = parse_version(version)?;
+        assert_eq!(major, 6);
+        assert_eq!(minor, 0);
+        assert_eq!(patch, 1);
+        Ok(())
+    }
 }

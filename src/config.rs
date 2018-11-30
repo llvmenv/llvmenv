@@ -1,4 +1,5 @@
 use dirs;
+use failure::bail;
 use log::info;
 use std::io::Write;
 use std::path::PathBuf;
@@ -9,15 +10,19 @@ use crate::error::Result;
 pub const APP_NAME: &'static str = "llvmenv";
 pub const ENTRY_TOML: &'static str = "entry.toml";
 
-/// Example of entry.toml
-const DEFAULT_ENTRY: &'static [u8] = br#"
-[llvm-dev]
-llvm_git  = "https://github.com/llvm-mirror/llvm"
-clang_git = "https://github.com/llvm-mirror/clang"
-build     = "Release"
-target    = ["X86"]
-example   = 0
-document  = 0
+const LLVM_MIRROR: &str = r#"
+[llvm-mirror]
+url    = "https://github.com/llvm-mirror/llvm"
+target = ["X86"]
+
+[[llvm-mirror.tools]]
+name = "clang"
+url = "https://github.com/llvm-mirror/clang"
+
+[[llvm-mirror.tools]]
+name = "clang-extra"
+url = "https://github.com/llvm-mirror/clang-tools-extra"
+relative_path = "tools/clang/tools/extra"
 "#;
 
 pub fn config_dir() -> PathBuf {
@@ -27,7 +32,11 @@ pub fn config_dir() -> PathBuf {
             .expect("$HOME does not found")
             .join(".config"), // Use $HOME/.config
     };
-    home.join(APP_NAME)
+    let path = home.join(APP_NAME);
+    if !path.exists() {
+        fs::create_dir_all(&path).expect(&format!("Cannot create configure at {}", path.display()));
+    }
+    path
 }
 
 pub fn cache_dir() -> PathBuf {
@@ -37,7 +46,14 @@ pub fn cache_dir() -> PathBuf {
             .expect("$HOME does not found")
             .join(".cache"), // Use $HOME/.cache
     };
-    home.join(APP_NAME)
+    let path = home.join(APP_NAME);
+    if !path.exists() {
+        fs::create_dir_all(&path).expect(&format!(
+            "Cannot create cache directory at {}",
+            path.display()
+        ));
+    }
+    path
 }
 
 pub fn data_dir() -> PathBuf {
@@ -48,7 +64,14 @@ pub fn data_dir() -> PathBuf {
             .join(".local")
             .join("share"), // Use $HOME/.local/share/llvmenv
     };
-    home.join(APP_NAME)
+    let path = home.join(APP_NAME);
+    if !path.exists() {
+        fs::create_dir_all(&path).expect(&format!(
+            "Cannot create data directory at {}",
+            path.display()
+        ));
+    }
+    path
 }
 
 /// Initialize configure directory `$XDG_CONFIG_HOME/llvmenv/`
@@ -62,7 +85,9 @@ pub fn init_config() -> Result<()> {
     if !entry.exists() {
         info!("Create default entry setting: {}", entry.display());
         let mut f = fs::File::create(entry)?;
-        f.write(DEFAULT_ENTRY)?;
+        f.write(LLVM_MIRROR.as_bytes())?;
+    } else {
+        bail!("Setting already exists.");
     }
     Ok(())
 }

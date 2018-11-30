@@ -1,5 +1,6 @@
 use llvmenv::*;
 
+use failure::bail;
 use std::env;
 use std::path::PathBuf;
 use std::process::exit;
@@ -27,17 +28,6 @@ enum LLVMEnv {
         update: bool,
         #[structopt(short = "j", long = "nproc")]
         nproc: Option<usize>,
-        #[structopt(
-            long = "prefix",
-            parse(from_os_str),
-            help = "Overwrite prefix"
-        )]
-        prefix: Option<PathBuf>,
-        #[structopt(
-            long = "build",
-            help = "Overwrite cmake build setting (Debug/Release)"
-        )]
-        build: Option<String>,
     },
 
     #[structopt(name = "current", about = "Show the name of current build")]
@@ -45,18 +35,12 @@ enum LLVMEnv {
         #[structopt(short = "v", long = "verbose")]
         verbose: bool,
     },
-    #[structopt(
-        name = "prefix",
-        about = "Show the prefix of the current build"
-    )]
+    #[structopt(name = "prefix", about = "Show the prefix of the current build")]
     Prefix {
         #[structopt(short = "v", long = "verbose")]
         verbose: bool,
     },
-    #[structopt(
-        name = "version",
-        about = "Show the base version of the current build"
-    )]
+    #[structopt(name = "version", about = "Show the base version of the current build")]
     Version {
         #[structopt(short = "n", long = "name")]
         name: Option<String>,
@@ -77,10 +61,7 @@ enum LLVMEnv {
         path: Option<PathBuf>,
     },
 
-    #[structopt(
-        name = "archive",
-        about = "archive build into *.tar.xz (require pixz)"
-    )]
+    #[structopt(name = "archive", about = "archive build into *.tar.xz (require pixz)")]
     Archive {
         name: String,
         #[structopt(short = "v", long = "verbose")]
@@ -118,29 +99,24 @@ fn main() -> error::Result<()> {
         }
 
         LLVMEnv::Entries {} => {
-            let entries = entry::load_entries()?;
-            for entry in &entries {
-                println!("{}", entry.get_name());
+            if let Ok(entries) = entry::load_entries() {
+                for entry in &entries {
+                    println!("{}", entry.name());
+                }
+            } else {
+                bail!("No entries. Please define entries in $XDG_CONFIG_HOME/llvmenv/entry.toml");
             }
         }
         LLVMEnv::BuildEntry {
             name,
             update,
             nproc,
-            prefix,
-            build,
         } => {
-            let mut entry = entry::load_entry(&name)?;
-            if let Some(prefix) = prefix {
-                entry.overwrite_prefix(&prefix);
-            }
+            let entry = entry::load_entry(&name)?;
             let nproc = nproc.unwrap_or(num_cpus::get());
             entry.checkout().unwrap();
             if update {
-                entry.fetch().unwrap();
-            }
-            if let Some(build) = build {
-                entry.overwrite_build(&build);
+                entry.update().unwrap();
             }
             entry.build(nproc).unwrap();
         }
