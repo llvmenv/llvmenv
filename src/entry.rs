@@ -2,7 +2,7 @@
 
 use failure::bail;
 use itertools::*;
-use log::warn;
+use log::{info, warn};
 use serde_derive::Deserialize;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -239,7 +239,12 @@ impl Entry {
     }
 
     pub fn build_dir(&self) -> Result<PathBuf> {
-        Ok(self.src_dir()?.join("build"))
+        let dir = self.src_dir()?.join("build");
+        if !dir.exists() {
+            info!("Create build dir: {}", dir.display());
+            fs::create_dir_all(&dir)?;
+        }
+        Ok(dir)
     }
 
     pub fn prefix(&self) -> Result<PathBuf> {
@@ -263,8 +268,7 @@ impl Entry {
     fn configure(&self) -> Result<()> {
         let setting = self.setting();
         let mut opts = setting.builder.option();
-        opts.push(format!("-H{}", self.src_dir()?.display()));
-        opts.push(format!("-B{}", self.build_dir()?.display()));
+        opts.push(format!("{}", self.src_dir()?.display()));
         opts.push(format!(
             "-DCMAKE_INSTALL_PREFIX={}",
             data_dir()?.join(self.prefix()?).display()
@@ -279,7 +283,10 @@ impl Entry {
         for (k, v) in &setting.option {
             opts.push(format!("-D{}={}", k, v));
         }
-        process::Command::new("cmake").args(&opts).check_run()?;
+        process::Command::new("cmake")
+            .args(&opts)
+            .current_dir(self.build_dir()?)
+            .check_run()?;
         Ok(())
     }
 }
