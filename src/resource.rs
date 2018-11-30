@@ -1,4 +1,4 @@
-//! Get LLVM/Clang source
+//! Get remote LLVM/Clang source
 
 use failure::{bail, err_msg};
 use log::info;
@@ -12,14 +12,37 @@ use url::Url;
 use crate::config::*;
 use crate::error::*;
 
-#[derive(Debug)]
+/// Remote LLVM/Clang resource
+#[derive(Debug, PartialEq)]
 pub enum Resource {
+    /// Remote Subversion repository
     Svn { url: String },
+    /// Remote Git repository
     Git { url: String, branch: Option<String> },
+    /// Tar archive
     Tar { url: String },
 }
 
 impl Resource {
+    /// Detect remote resorce from URL
+    ///
+    /// ```
+    /// # use llvmenv::resource::Resource;
+    /// // Official SVN repository
+    /// let llvm_official_url = "http://llvm.org/svn/llvm-project/llvm/trunk";
+    /// let svn = Resource::from_url(llvm_official_url).unwrap();
+    /// assert_eq!(svn, Resource::Svn { url: llvm_official_url.into() });
+    ///
+    /// // GitHub mirror
+    /// let github_mirror = "https://github.com/llvm-mirror/llvm";
+    /// let git = Resource::from_url(github_mirror).unwrap();
+    /// assert_eq!(git, Resource::Git { url: github_mirror.into(), branch: None });
+    ///
+    /// // Tar release
+    /// let tar_url = "http://releases.llvm.org/6.0.1/llvm-6.0.1.src.tar.xz";
+    /// let tar = Resource::from_url(tar_url).unwrap();
+    /// assert_eq!(tar, Resource::Tar { url: tar_url.into() });
+    /// ```
     pub fn from_url(url_str: &str) -> Result<Self> {
         // Check file extension
         if let Ok(filename) = get_filename_from_url(url_str) {
@@ -204,42 +227,6 @@ fn get_filename_from_url(url_str: &str) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn parse_tar_url() -> Result<()> {
-        let tar_url = "http://releases.llvm.org/6.0.1/llvm-6.0.1.src.tar.xz";
-        match Resource::from_url(tar_url)? {
-            Resource::Tar { url } => {
-                assert_eq!(url, tar_url);
-            }
-            _ => unreachable!("Invalid detection"),
-        }
-        Ok(())
-    }
-
-    #[test]
-    fn parse_svn_url() -> Result<()> {
-        let svn_url = "http://llvm.org/svn/llvm-project/llvm/trunk";
-        match Resource::from_url(svn_url)? {
-            Resource::Svn { url } => {
-                assert_eq!(url, svn_url);
-            }
-            _ => unreachable!("Invalid detection"),
-        }
-        Ok(())
-    }
-
-    #[test]
-    fn parse_git_url() -> Result<()> {
-        let git_url = "http://github.com/termoshtt/llvmenv";
-        match Resource::from_url(git_url)? {
-            Resource::Git { url, branch: _ } => {
-                assert_eq!(url, git_url);
-            }
-            _ => unreachable!("Invalid detection"),
-        }
-        Ok(())
-    }
 
     // Test donwloading this repo
     #[test]

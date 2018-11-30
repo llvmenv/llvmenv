@@ -13,21 +13,28 @@ use crate::config::*;
 use crate::error::*;
 use crate::resource::Resource;
 
+/// Option for CMake Generators
+///
+/// - Official document: [CMake Generators](https://cmake.org/cmake/help/latest/manual/cmake-generators.7.html)
 #[derive(Deserialize, Debug)]
-enum Builder {
-    Platform, // Platform default
+pub enum CMakeGenerator {
+    /// Use platform default generator (without -G option)
+    Platform,
+    /// Unix Makefile
     Makefile,
+    /// Ninja builder
     Ninja,
+    /// Visual Studio 15 2017
     VisualStudio,
 }
 
-impl Builder {
+impl CMakeGenerator {
     fn option(&self) -> Vec<String> {
         match self {
-            Builder::Platform => Vec::new(),
-            Builder::Makefile => vec!["-G", "Unix Makefiles"],
-            Builder::Ninja => vec!["-G", "Ninja"],
-            Builder::VisualStudio => vec!["-G", "Visual Studio 15 2017"],
+            CMakeGenerator::Platform => Vec::new(),
+            CMakeGenerator::Makefile => vec!["-G", "Unix Makefiles"],
+            CMakeGenerator::Ninja => vec!["-G", "Ninja"],
+            CMakeGenerator::VisualStudio => vec!["-G", "Visual Studio 15 2017"],
         }
         .into_iter()
         .map(|s| s.into())
@@ -36,22 +43,23 @@ impl Builder {
 
     fn build_option(&self, nproc: usize) -> Vec<String> {
         match self {
-            Builder::VisualStudio | Builder::Platform => Vec::new(),
-            Builder::Makefile | Builder::Ninja => {
+            CMakeGenerator::VisualStudio | CMakeGenerator::Platform => Vec::new(),
+            CMakeGenerator::Makefile | CMakeGenerator::Ninja => {
                 vec!["--".into(), "-j".into(), format!("{}", nproc)]
             }
         }
     }
 }
 
-impl Default for Builder {
+impl Default for CMakeGenerator {
     fn default() -> Self {
-        Builder::Platform
+        CMakeGenerator::Platform
     }
 }
 
+/// CMake build type
 #[derive(Deserialize, Debug)]
-enum BuildType {
+pub enum BuildType {
     Debug,
     Release,
 }
@@ -80,23 +88,28 @@ impl Tool {
     }
 }
 
-/// Setting for both Remote and Local entries
+/// Setting for both Remote and Local entries. TOML setting file will be decoded into this struct.
 #[derive(Deserialize, Debug)]
 pub struct EntrySetting {
-    url: Option<String>,
-    path: Option<PathBuf>,
+    /// URL of remote LLVM resource, see also [resouce](../resource/index.html) module
+    pub url: Option<String>,
+    /// Path of local LLVM source dir
+    pub path: Option<PathBuf>,
+    /// Additional LLVM Tools, e.g. clang, openmp, lld, and so on.
     #[serde(default)]
-    tools: Vec<Tool>,
-    /// empty means all backend
+    pub tools: Vec<Tool>,
+    /// Target to be build. Empty means all backend
     #[serde(default)]
-    target: Vec<String>,
-    /// other LLVM build options
+    pub target: Vec<String>,
+    /// Additional LLVM build options
     #[serde(default)]
-    option: HashMap<String, String>,
+    pub option: HashMap<String, String>,
+    /// CMake Generator option (-G option in cmake)
     #[serde(default)]
-    builder: Builder,
+    pub builder: CMakeGenerator,
+    ///  Option for `CMAKE_BUILD_TYPE`
     #[serde(default)]
-    build_type: BuildType,
+    pub build_type: BuildType,
 }
 
 #[derive(Debug)]
