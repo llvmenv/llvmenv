@@ -260,7 +260,7 @@ mod tests {
         let tar = Resource::Tar {
             url: "https://github.com/termoshtt/llvmenv/archive/0.1.10.tar.gz".into(),
         };
-        let tmp_dir = cache_dir().join("_llvmenv_test");
+        let tmp_dir = cache_dir()?.join("_llvmenv_test");
         if tmp_dir.exists() {
             fs::remove_dir_all(&tmp_dir)?;
         }
