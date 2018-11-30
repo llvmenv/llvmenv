@@ -33,6 +33,15 @@ impl Builder {
         .map(|s| s.into())
         .collect()
     }
+
+    fn build_option(&self, nproc: usize) -> Vec<String> {
+        match self {
+            Builder::VisualStudio | Builder::Platform => Vec::new(),
+            Builder::Makefile | Builder::Ninja => {
+                vec!["--".into(), "-j".into(), format!("{}", nproc)]
+            }
+        }
+    }
 }
 
 impl Default for Builder {
@@ -232,10 +241,8 @@ impl Entry {
                 &format!("{}", self.build_dir().display()),
                 "--target",
                 "install",
-                "--",
-                "-j",
-                &format!("{}", nproc),
             ])
+            .args(&self.setting().builder.build_option(nproc))
             .check_run()?;
         Ok(())
     }
