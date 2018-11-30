@@ -147,7 +147,7 @@ impl Resource {
             }
             Resource::Tar { url } => {
                 info!("Download Tar file: {}", url);
-                let working = cache_dir().join(".tar_download");
+                let working = cache_dir()?.join(".tar_download");
                 fs::create_dir_all(&working)?;
                 let filename = get_filename_from_url(url)?;
                 let path = working.join(&filename);

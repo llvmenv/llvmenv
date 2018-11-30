@@ -1,5 +1,5 @@
 use dirs;
-use failure::bail;
+use failure::{bail, err_msg};
 use log::info;
 use std::fs;
 use std::io::Write;
@@ -12,39 +12,39 @@ pub const ENTRY_TOML: &'static str = "entry.toml";
 
 const LLVM_MIRROR: &str = include_str!("llvm-mirror.toml");
 
-pub fn config_dir() -> PathBuf {
-    let path = dirs::home_dir().expect("Unsupported OS").join(APP_NAME);
+pub fn config_dir() -> Result<PathBuf> {
+    let path = dirs::home_dir()
+        .ok_or(err_msg("Unsupported OS"))?
+        .join(APP_NAME);
     if !path.exists() {
-        fs::create_dir_all(&path).expect(&format!("Cannot create configure at {}", path.display()));
+        fs::create_dir_all(&path)?;
     }
-    path
+    Ok(path)
 }
 
-pub fn cache_dir() -> PathBuf {
-    let path = dirs::cache_dir().expect("Unsupported OS").join(APP_NAME);
+pub fn cache_dir() -> Result<PathBuf> {
+    let path = dirs::cache_dir()
+        .ok_or(err_msg("Unsupported OS"))?
+        .join(APP_NAME);
     if !path.exists() {
-        fs::create_dir_all(&path).expect(&format!(
-            "Cannot create cache directory at {}",
-            path.display()
-        ));
+        fs::create_dir_all(&path)?;
     }
-    path
+    Ok(path)
 }
 
-pub fn data_dir() -> PathBuf {
-    let path = dirs::data_dir().expect("Unsupported OS").join(APP_NAME);
+pub fn data_dir() -> Result<PathBuf> {
+    let path = dirs::data_dir()
+        .ok_or(err_msg("Unsupported OS"))?
+        .join(APP_NAME);
     if !path.exists() {
-        fs::create_dir_all(&path).expect(&format!(
-            "Cannot create data directory at {}",
-            path.display()
-        ));
+        fs::create_dir_all(&path)?;
     }
-    path
+    Ok(path)
 }
 
 /// Initialize configure file
 pub fn init_config() -> Result<()> {
-    let dir = config_dir();
+    let dir = config_dir()?;
     let entry = dir.join(ENTRY_TOML);
     if !entry.exists() {
         info!("Create default entry setting: {}", entry.display());

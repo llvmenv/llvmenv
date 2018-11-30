@@ -194,7 +194,7 @@ fn main() -> error::Result<()> {
 }
 
 fn get_existing_build(name: &str) -> build::Build {
-    let build = build::Build::from_name(&name);
+    let build = build::Build::from_name(&name).unwrap();
     if build.exists() {
         build
     } else {
