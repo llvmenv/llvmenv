@@ -10,20 +10,7 @@ use crate::error::Result;
 pub const APP_NAME: &'static str = "llvmenv";
 pub const ENTRY_TOML: &'static str = "entry.toml";
 
-const LLVM_MIRROR: &str = r#"
-[llvm-mirror]
-url    = "https://github.com/llvm-mirror/llvm"
-target = ["X86"]
-
-[[llvm-mirror.tools]]
-name = "clang"
-url = "https://github.com/llvm-mirror/clang"
-
-[[llvm-mirror.tools]]
-name = "clang-extra"
-url = "https://github.com/llvm-mirror/clang-tools-extra"
-relative_path = "tools/clang/tools/extra"
-"#;
+const LLVM_MIRROR: &str = include_str!("llvm-mirror.toml");
 
 pub fn config_dir() -> PathBuf {
     let home = match env::var("XDG_CONFIG_HOME") {
