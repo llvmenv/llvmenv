@@ -15,25 +15,10 @@ jobs:
     steps:
       - checkout
       - run:
-          name: check init toml
+          name: run init/entries
           command: |
             cargo run init
             cargo run entries
-  run_build_entry:
-    docker:
-      - image: rust:latest
-    steps:
-      - checkout
-      - run:
-          name: Install cmake
-          command: |
-            apt update
-            apt install -y cmake
-      - run:
-          name: Test building LLVM
-          command: |
-            cargo run -- init
-            cargo run -- build-entry llvm-mirror
 
 workflows:
   version: 2
@@ -41,7 +26,3 @@ workflows:
     jobs:
       - cargo_test
       - run_entries
-      - run_build_entry:
-          requires:
-            - cargo_test
-            - run_entries

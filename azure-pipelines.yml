@@ -9,11 +9,6 @@ steps:
     set PATH=%PATH%;%USERPROFILE%\.cargo\bin
     cargo test -v
   displayName: 'cargo test'
-- script: |
-    set PATH=%PATH%;%USERPROFILE%\.cargo\bin
-    cargo run -- init
-    cargo run -- build-entry llvm-mirror
-  displayName: 'Build latest LLVM'
 
 strategy:
   maxParallel: 4
