@@ -14,7 +14,7 @@ categories    = []
 edition = '2018'
 
 [dependencies]
-fs_extra = "*"
+fs_extra = "1.1"
 dirs = "1.0"
 env_logger = "0.5"
 failure = "0.1"
