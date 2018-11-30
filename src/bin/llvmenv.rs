@@ -27,6 +27,8 @@ enum LLVMEnv {
         name: String,
         #[structopt(short = "u", long = "update")]
         update: bool,
+        #[structopt(short = "c", long = "clean")]
+        clean: bool,
         #[structopt(short = "j", long = "nproc")]
         nproc: Option<usize>,
     },
@@ -114,6 +116,7 @@ fn main() -> error::Result<()> {
         LLVMEnv::BuildEntry {
             name,
             update,
+            clean,
             nproc,
         } => {
             let entry = entry::load_entry(&name)?;
@@ -121,6 +124,9 @@ fn main() -> error::Result<()> {
             entry.checkout().unwrap();
             if update {
                 entry.update().unwrap();
+            }
+            if clean {
+                entry.clean().unwrap();
             }
             entry.build(nproc).unwrap();
         }

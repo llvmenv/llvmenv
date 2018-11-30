@@ -265,6 +265,11 @@ impl Entry {
         Ok(())
     }
 
+    pub fn clean(&self) -> Result<()> {
+        fs::remove_dir_all(self.build_dir()?)?;
+        Ok(())
+    }
+
     fn configure(&self) -> Result<()> {
         let setting = self.setting();
         let mut opts = setting.builder.option();
