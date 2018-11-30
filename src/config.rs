@@ -13,7 +13,7 @@ pub const ENTRY_TOML: &'static str = "entry.toml";
 const LLVM_MIRROR: &str = include_str!("llvm-mirror.toml");
 
 pub fn config_dir() -> Result<PathBuf> {
-    let path = dirs::home_dir()
+    let path = dirs::config_dir()
         .ok_or(err_msg("Unsupported OS"))?
         .join(APP_NAME);
     if !path.exists() {
