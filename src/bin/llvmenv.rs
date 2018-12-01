@@ -27,8 +27,10 @@ enum LLVMEnv {
         name: String,
         #[structopt(short = "u", long = "update")]
         update: bool,
-        #[structopt(short = "c", long = "clean")]
+        #[structopt(short = "c", long = "clean build directory")]
         clean: bool,
+        #[structopt(short = "d", long = "discard source directory for remote resources")]
+        discard: bool,
         #[structopt(short = "j", long = "nproc")]
         nproc: Option<usize>,
     },
@@ -117,16 +119,20 @@ fn main() -> error::Result<()> {
             name,
             update,
             clean,
+            discard,
             nproc,
         } => {
             let entry = entry::load_entry(&name)?;
             let nproc = nproc.unwrap_or(num_cpus::get());
+            if discard {
+                entry.clean_cache_dir().unwrap();
+            }
             entry.checkout().unwrap();
             if update {
                 entry.update().unwrap();
             }
             if clean {
-                entry.clean().unwrap();
+                entry.clean_build_dir().unwrap();
             }
             entry.build(nproc).unwrap();
         }

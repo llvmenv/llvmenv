@@ -256,6 +256,11 @@ impl Entry {
         Ok(())
     }
 
+    pub fn clean_cache_dir(&self) -> Result<()> {
+        fs::remove_dir_all(self.src_dir()?)?;
+        Ok(())
+    }
+
     pub fn update(&self) -> Result<()> {
         match self {
             Entry::Remote { url, tools, .. } => {
@@ -294,6 +299,11 @@ impl Entry {
         Ok(dir)
     }
 
+    pub fn clean_build_dir(&self) -> Result<()> {
+        fs::remove_dir_all(self.build_dir()?)?;
+        Ok(())
+    }
+
     pub fn prefix(&self) -> Result<PathBuf> {
         Ok(data_dir()?.join(self.name()))
     }
@@ -309,11 +319,6 @@ impl Entry {
             ])
             .args(&self.setting().builder.build_option(nproc))
             .check_run()?;
-        Ok(())
-    }
-
-    pub fn clean(&self) -> Result<()> {
-        fs::remove_dir_all(self.build_dir()?)?;
         Ok(())
     }
 
