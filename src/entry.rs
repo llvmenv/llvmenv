@@ -16,7 +16,7 @@ use crate::resource::Resource;
 /// Option for CMake Generators
 ///
 /// - Official document: [CMake Generators](https://cmake.org/cmake/help/latest/manual/cmake-generators.7.html)
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, PartialEq, Debug)]
 pub enum CMakeGenerator {
     /// Use platform default generator (without -G option)
     Platform,
@@ -29,6 +29,23 @@ pub enum CMakeGenerator {
 }
 
 impl CMakeGenerator {
+    /// ```
+    /// # use llvmenv::entry::CMakeGenerator;
+    /// assert_eq!(CMakeGenerator::from_str("Makefile").unwrap(), CMakeGenerator::Makefile);
+    /// assert_eq!(CMakeGenerator::from_str("Ninja").unwrap(), CMakeGenerator::Ninja);
+    /// assert_eq!(CMakeGenerator::from_str("vs").unwrap(), CMakeGenerator::VisualStudio);
+    /// assert_eq!(CMakeGenerator::from_str("VisualStudio").unwrap(), CMakeGenerator::VisualStudio);
+    /// assert!(CMakeGenerator::from_str("Unknown").is_err());
+    /// ```
+    pub fn from_str(builder: &str) -> Result<Self> {
+        Ok(match builder.to_ascii_lowercase().as_str() {
+            "makefile" => CMakeGenerator::Makefile,
+            "ninja" => CMakeGenerator::Ninja,
+            "visualstudio" | "vs" => CMakeGenerator::VisualStudio,
+            _ => bail!("Unsupported Generator: {}", builder),
+        })
+    }
+
     fn option(&self) -> Vec<String> {
         match self {
             CMakeGenerator::Platform => Vec::new(),
@@ -89,7 +106,7 @@ impl Tool {
 }
 
 /// Setting for both Remote and Local entries. TOML setting file will be decoded into this struct.
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Default)]
 pub struct EntrySetting {
     /// URL of remote LLVM resource, see also [resouce](../resource/index.html) module
     pub url: Option<String>,
@@ -162,9 +179,56 @@ fn load_entry_toml(toml_str: &str) -> Result<Vec<Entry>> {
         .collect()
 }
 
+fn official_releases() -> Result<Vec<Entry>> {
+    [
+        (7, 0, 0),
+        (6, 0, 1),
+        (6, 0, 0),
+        (5, 0, 2),
+        (5, 0, 1),
+        (4, 0, 1),
+        (4, 0, 0),
+        (3, 9, 1),
+        (3, 9, 0),
+    ]
+    .into_iter()
+    .map(|(major, minor, patch)| {
+        let version = format!("{}.{}.{}", major, minor, patch);
+        let mut setting = EntrySetting::default();
+        setting.url = Some(format!(
+            "http://releases.llvm.org/{version}/llvm-{version}.src.tar.xz",
+            version = version
+        ));
+        let clang = Tool {
+            name: "clang".into(),
+            url: format!(
+                "http://releases.llvm.org/{version}/cfe-{version}.src.tar.xz",
+                version = version
+            ),
+            branch: None,
+            relative_path: None,
+        };
+        let lld = Tool {
+            name: "lld".into(),
+            url: format!(
+                "http://releases.llvm.org/{version}/lld-{version}.src.tar.xz",
+                version = version
+            ),
+            branch: None,
+            relative_path: None,
+        };
+        setting.tools = vec![clang, lld];
+        Entry::parse_setting(&version, setting)
+    })
+    .collect()
+}
+
 pub fn load_entries() -> Result<Vec<Entry>> {
     let global_toml = config_dir()?.join(ENTRY_TOML);
-    load_entry_toml(&fs::read_to_string(global_toml)?)
+    let mut entries = load_entry_toml(&fs::read_to_string(global_toml)?)?;
+    let mut official = official_releases()?;
+    entries.append(&mut official);
+    Ok(entries)
 }
 
 pub fn load_entry(name: &str) -> Result<Entry> {
@@ -183,6 +247,19 @@ impl Entry {
             Entry::Remote { setting, .. } => setting,
             Entry::Local { setting, .. } => setting,
         }
+    }
+
+    fn setting_mut(&mut self) -> &mut EntrySetting {
+        match self {
+            Entry::Remote { setting, .. } => setting,
+            Entry::Local { setting, .. } => setting,
+        }
+    }
+
+    pub fn set_builder(&mut self, builder: &str) -> Result<()> {
+        let builder = CMakeGenerator::from_str(builder)?;
+        self.setting_mut().builder = builder;
+        Ok(())
     }
 
     pub fn checkout(&self) -> Result<()> {
@@ -206,6 +283,12 @@ impl Entry {
                 }
             }
         }
+        Ok(())
+    }
+
+    pub fn clean_cache_dir(&self) -> Result<()> {
+        info!("Remove cache dir: {}", self.src_dir()?.display());
+        fs::remove_dir_all(self.src_dir()?)?;
         Ok(())
     }
 
@@ -247,6 +330,12 @@ impl Entry {
         Ok(dir)
     }
 
+    pub fn clean_build_dir(&self) -> Result<()> {
+        info!("Remove build dir: {}", self.build_dir()?.display());
+        fs::remove_dir_all(self.build_dir()?)?;
+        Ok(())
+    }
+
     pub fn prefix(&self) -> Result<PathBuf> {
         Ok(data_dir()?.join(self.name()))
     }
@@ -262,11 +351,6 @@ impl Entry {
             ])
             .args(&self.setting().builder.build_option(nproc))
             .check_run()?;
-        Ok(())
-    }
-
-    pub fn clean(&self) -> Result<()> {
-        fs::remove_dir_all(self.build_dir()?)?;
         Ok(())
     }
 
