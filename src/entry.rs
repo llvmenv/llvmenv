@@ -89,7 +89,7 @@ impl Tool {
 }
 
 /// Setting for both Remote and Local entries. TOML setting file will be decoded into this struct.
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Default)]
 pub struct EntrySetting {
     /// URL of remote LLVM resource, see also [resouce](../resource/index.html) module
     pub url: Option<String>,
@@ -162,9 +162,56 @@ fn load_entry_toml(toml_str: &str) -> Result<Vec<Entry>> {
         .collect()
 }
 
+fn official_releases() -> Result<Vec<Entry>> {
+    [
+        (7, 0, 0),
+        (6, 0, 1),
+        (6, 0, 0),
+        (5, 0, 2),
+        (5, 0, 1),
+        (4, 0, 1),
+        (4, 0, 0),
+        (3, 9, 1),
+        (3, 9, 0),
+    ]
+    .into_iter()
+    .map(|(major, minor, patch)| {
+        let version = format!("{}.{}.{}", major, minor, patch);
+        let mut setting = EntrySetting::default();
+        setting.url = Some(format!(
+            "http://releases.llvm.org/{version}/llvm-{version}.src.tar.xz",
+            version = version
+        ));
+        let clang = Tool {
+            name: "clang".into(),
+            url: format!(
+                "http://releases.llvm.org/{version}/cfe-{version}.src.tar.xz",
+                version = version
+            ),
+            branch: None,
+            relative_path: None,
+        };
+        let lld = Tool {
+            name: "lld".into(),
+            url: format!(
+                "http://releases.llvm.org/{version}/lld-{version}.src.tar.xz",
+                version = version
+            ),
+            branch: None,
+            relative_path: None,
+        };
+        setting.tools = vec![clang, lld];
+        Entry::parse_setting(&version, setting)
+    })
+    .collect()
+}
+
 pub fn load_entries() -> Result<Vec<Entry>> {
     let global_toml = config_dir()?.join(ENTRY_TOML);
-    load_entry_toml(&fs::read_to_string(global_toml)?)
+    let mut entries = load_entry_toml(&fs::read_to_string(global_toml)?)?;
+    let mut official = official_releases()?;
+    entries.append(&mut official);
+    Ok(entries)
 }
 
 pub fn load_entry(name: &str) -> Result<Entry> {
