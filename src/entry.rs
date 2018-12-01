@@ -16,7 +16,7 @@ use crate::resource::Resource;
 /// Option for CMake Generators
 ///
 /// - Official document: [CMake Generators](https://cmake.org/cmake/help/latest/manual/cmake-generators.7.html)
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, PartialEq, Debug)]
 pub enum CMakeGenerator {
     /// Use platform default generator (without -G option)
     Platform,
@@ -29,6 +29,23 @@ pub enum CMakeGenerator {
 }
 
 impl CMakeGenerator {
+    /// ```
+    /// # use llvmenv::entry::CMakeGenerator;
+    /// assert_eq!(CMakeGenerator::from_str("Makefile").unwrap(), CMakeGenerator::Makefile);
+    /// assert_eq!(CMakeGenerator::from_str("Ninja").unwrap(), CMakeGenerator::Ninja);
+    /// assert_eq!(CMakeGenerator::from_str("vs").unwrap(), CMakeGenerator::VisualStudio);
+    /// assert_eq!(CMakeGenerator::from_str("VisualStudio").unwrap(), CMakeGenerator::VisualStudio);
+    /// assert!(CMakeGenerator::from_str("Unknown").is_err());
+    /// ```
+    pub fn from_str(builder: &str) -> Result<Self> {
+        Ok(match builder.to_ascii_lowercase().as_str() {
+            "makefile" => CMakeGenerator::Makefile,
+            "ninja" => CMakeGenerator::Ninja,
+            "visualstudio" | "vs" => CMakeGenerator::VisualStudio,
+            _ => bail!("Unsupported Generator: {}", builder),
+        })
+    }
+
     fn option(&self) -> Vec<String> {
         match self {
             CMakeGenerator::Platform => Vec::new(),
@@ -232,6 +249,19 @@ impl Entry {
         }
     }
 
+    fn setting_mut(&mut self) -> &mut EntrySetting {
+        match self {
+            Entry::Remote { setting, .. } => setting,
+            Entry::Local { setting, .. } => setting,
+        }
+    }
+
+    pub fn set_builder(&mut self, builder: &str) -> Result<()> {
+        let builder = CMakeGenerator::from_str(builder)?;
+        self.setting_mut().builder = builder;
+        Ok(())
+    }
+
     pub fn checkout(&self) -> Result<()> {
         match self {
             Entry::Remote { url, tools, .. } => {
@@ -257,6 +287,7 @@ impl Entry {
     }
 
     pub fn clean_cache_dir(&self) -> Result<()> {
+        info!("Remove cache dir: {}", self.src_dir()?.display());
         fs::remove_dir_all(self.src_dir()?)?;
         Ok(())
     }
@@ -300,6 +331,7 @@ impl Entry {
     }
 
     pub fn clean_build_dir(&self) -> Result<()> {
+        info!("Remove build dir: {}", self.build_dir()?.display());
         fs::remove_dir_all(self.build_dir()?)?;
         Ok(())
     }
