@@ -27,11 +27,19 @@ enum LLVMEnv {
         name: String,
         #[structopt(short = "u", long = "update")]
         update: bool,
-        #[structopt(short = "c", long = "clean build directory")]
+        #[structopt(short = "c", long = "clean", help = "clean build directory")]
         clean: bool,
-        #[structopt(short = "G", long = "Overwrite cmake generator setting")]
+        #[structopt(
+            short = "G",
+            long = "builder",
+            help = "Overwrite cmake generator setting"
+        )]
         builder: Option<String>,
-        #[structopt(short = "d", long = "discard source directory for remote resources")]
+        #[structopt(
+            short = "d",
+            long = "discard",
+            help = "discard source directory for remote resources"
+        )]
         discard: bool,
         #[structopt(short = "j", long = "nproc")]
         nproc: Option<usize>,
