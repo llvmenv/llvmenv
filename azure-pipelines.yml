@@ -1,7 +1,7 @@
 resources:
   containers:
     - container: tarpaulin
-      image: xd009642/tarpaulin:develop-nightly
+      image: xd009642/tarpaulin:latest-nightly
       options: --security-opt seccomp=unconfined
 
 jobs:
@@ -32,9 +32,9 @@ jobs:
   container: tarpaulin
   steps:
   - script: |
-      cargo clean
-      cargo test -v
-      cargo tarpaulin --out Xml
+      cargo +nightly clean
+      cargo +nightly test -v
+      cargo +nightly tarpaulin --out Xml
       bash <(curl -s https://codecov.io/bash)
     displayName: 'Run tarpaulin'
     env:
