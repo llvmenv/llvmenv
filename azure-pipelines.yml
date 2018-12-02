@@ -1,7 +1,7 @@
 resources:
   containers:
     - container: tarpaulin
-      image: xd009642/tarpaulin:latest-nightly
+      image: xd009642/tarpaulin:develop-nightly
       options: --security-opt seccomp=unconfined
 
 jobs:
@@ -38,4 +38,4 @@ jobs:
       bash <(curl -s https://codecov.io/bash)
     displayName: 'Run tarpaulin'
     env:
-      CODECOV_TOKEN: $(myCodecovToken)
+      CODECOV_TOKEN: $(llvmenvCodecovToken)
