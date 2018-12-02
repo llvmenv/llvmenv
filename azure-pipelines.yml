@@ -1,21 +1,42 @@
-pool:
-  vmImage: "vs2017-win2016"
+resources:
+  containers:
+    - container: tarpaulin
+      image: xd009642/tarpaulin:latest-nightly
+      options: --security-opt seccomp=unconfined
 
-steps:
-- script: |
-    curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain %channel% --default-host %target%
-  displayName: 'Setup Rust'
-- script: |
-    set PATH=%PATH%;%USERPROFILE%\.cargo\bin
-    cargo test -v
-  displayName: 'cargo test'
+jobs:
+ - job: Windows
+   pool:
+     vmImage: "vs2017-win2016"
+   steps:
+   - script: |
+       curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain %channel% --default-host %target%
+     displayName: 'Setup Rust'
+   - script: |
+       set PATH=%PATH%;%USERPROFILE%\.cargo\bin
+       cargo test -v
+     displayName: 'cargo test'
+   strategy:
+     maxParallel: 4
+     matrix:
+       msvc:
+         channel: beta
+         target: x86_64-pc-windows-msvc
+       gnu:
+         channel: beta
+         target: x86_64-pc-windows-gnu
 
-strategy:
-  maxParallel: 4
-  matrix:
-    msvc:
-      channel: beta
-      target: x86_64-pc-windows-msvc
-    gnu:
-      channel: beta
-      target: x86_64-pc-windows-gnu
+  - job: linux_tarpaulin
+    displayName: Linux (cargo tarpaulin)
+    pool:
+      vmImage: 'ubuntu-16.04'
+    container: tarpaulin
+    steps:
+    - script: |
+        cargo clean
+        cargo test -v
+        cargo tarpaulin --out Xml
+        bash <(curl -s https://codecov.io/bash)
+      displayName: 'Run tarpaulin'
+      env:
+        CODECOV_TOKEN: $(myCodecovToken)
