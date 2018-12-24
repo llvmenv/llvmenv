@@ -155,10 +155,14 @@ impl Default for BuildType {
 /// LLVM Tools e.g. clang, compiler-rt, and so on.
 #[derive(Deserialize, Debug, Clone)]
 pub struct Tool {
-    name: String,
-    url: String,
-    branch: Option<String>,
-    relative_path: Option<String>,
+    /// Name of tool (will be downloaded into `tools/{name}` by default)
+    pub name: String,
+    /// URL for tool. Git/SVN repository or Tar archive are allowed.
+    pub url: String,
+    /// Git branch (not for SVN)
+    pub branch: Option<String>,
+    /// Relative install Path (see the example of clang-extra in [module level doc](index.html))
+    pub relative_path: Option<String>,
 }
 
 impl Tool {
