@@ -2,34 +2,11 @@ llvmenv
 =========
 
 [![crate](https://img.shields.io/crates/v/llvmenv.svg)](https://crates.io/crates/llvmenv)
+[![docs.rs](https://docs.rs/llvmenv/badge.svg)](https://docs.rs/llvmenv)
 [![CircleCI](https://circleci.com/gh/termoshtt/llvmenv.svg?style=shield)](https://circleci.com/gh/termoshtt/llvmenv)
 [![Azure Pipeline](https://dev.azure.com/termoshtt2/GitHub%20CI/_apis/build/status/termoshtt.llvmenv)](https://dev.azure.com/termoshtt2/GitHub%20CI/_build/latest?definitionId=1)
 
 Manage multiple LLVM/Clang build
-
-```
-llvmenv 0.1.6
-Manage multiple LLVM/Clang builds
-
-USAGE:
-    llvmenv <SUBCOMMAND>
-
-FLAGS:
-    -h, --help       Prints help information
-    -V, --version    Prints version information
-
-SUBCOMMANDS:
-    build-entry    Build LLVM/Clang
-    builds         List usable build
-    current        Show the name of current build
-    entries        List entries to be built
-    global         Set the build to use (global)
-    help           Prints this message or the help of the given subcommand(s)
-    init           Initialize llvmenv
-    local          Set the build to use (local)
-    prefix         Show the prefix of the current build
-    zsh            Setup Zsh integration
-```
 
 Install
 -------
@@ -59,33 +36,61 @@ Concepts
 
 entry
 ------
-"entry" descrives how to compile LLVM/Clang, and set by `entry.toml` at `$XDG_CONFIG_HOME/llvmenv` (usually `$HOME/.config/llvmenv`).
+"entry" describes how to compile LLVM/Clang, and set by `entry.toml` at `$XDG_CONFIG_HOME/llvmenv` (usually `$HOME/.config/llvmenv`).
 `llvmenv init` generates default setting:
 
 ```toml
-[llvm-dev]
-llvm_git  = "https://github.com/llvm-mirror/llvm"
-clang_git = "https://github.com/llvm-mirror/clang"
-target    = ["X86"]
-build     = "Release"
-example   = 0
-document  = 0
+[llvm-mirror]
+url    = "https://github.com/llvm-mirror/llvm"
+target = ["X86"]
+
+[[llvm-mirror.tools]]
+name = "clang"
+url = "https://github.com/llvm-mirror/clang"
+
+[[llvm-mirror.tools]]
+name = "clang-extra"
+url = "https://github.com/llvm-mirror/clang-tools-extra"
+relative_path = "tools/clang/tools/extra"
 ```
+
+(TOML format has been changed largely at version 0.2.0)
+`tools` means LLVM tools, e.g. clang, compiler-rt, lld, and so on.
+These will be downloaded into `${llvm-top}/tools/${tool-name}` by default,
+and `relative_path` property change it.
+This toml will be decoded into [llvmenv::entry::EntrySetting][EntrySetting].
+
+[EntrySetting]: https://docs.rs/llvmenv/0.2.1/llvmenv/entry/struct.EntrySetting.html
+
+### Pre-defined entries
 
 There is also pre-defined entries corresponding to the LLVM/Clang releases:
 
 ```
 $ llvmenv entries
+llvm-mirror
+7.0.0
+6.0.1
 6.0.0
 5.0.2
 5.0.1
-5.0.0
 4.0.1
 4.0.0
 3.9.1
 3.9.0
-... (your entries)
 ```
+
+### Local entries
+Different from above "remote" entries, you can build locally cloned LLVM source with "local" entry.
+
+```toml
+[my-local-llvm]
+path = "/path/to/your/src"
+target = ["X86"]
+```
+
+Entry is regarded as "local" if there is `path` property, and "remote" if there is `url` property.
+Other options are common to "remote" entries.
 
 build
 ------
