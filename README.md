@@ -36,65 +36,15 @@ Concepts
 
 entry
 ------
-"entry" describes how to compile LLVM/Clang, and set by `entry.toml` at `$XDG_CONFIG_HOME/llvmenv` (usually `$HOME/.config/llvmenv`).
-`llvmenv init` generates default setting:
-
-```toml
-[llvm-mirror]
-url    = "https://github.com/llvm-mirror/llvm"
-target = ["X86"]
-
-[[llvm-mirror.tools]]
-name = "clang"
-url = "https://github.com/llvm-mirror/clang"
-
-[[llvm-mirror.tools]]
-name = "clang-extra"
-url = "https://github.com/llvm-mirror/clang-tools-extra"
-relative_path = "tools/clang/tools/extra"
-```
-
-(TOML format has been changed largely at version 0.2.0)
-`tools` means LLVM tools, e.g. clang, compiler-rt, lld, and so on.
-These will be downloaded into `${llvm-top}/tools/${tool-name}` by default,
-and `relative_path` property change it.
-This toml will be decoded into [llvmenv::entry::EntrySetting][EntrySetting].
-
-[EntrySetting]: https://docs.rs/llvmenv/0.2.1/llvmenv/entry/struct.EntrySetting.html
-
-### Pre-defined entries
-
-There is also pre-defined entries corresponding to the LLVM/Clang releases:
-
-```
-$ llvmenv entries
-llvm-mirror
-7.0.0
-6.0.1
-6.0.0
-5.0.2
-5.0.1
-4.0.1
-4.0.0
-3.9.1
-3.9.0
-```
-
-### Local entries
-Different from above "remote" entries, you can build locally cloned LLVM source with "local" entry.
-
-```toml
-[my-local-llvm]
-path = "/path/to/your/src"
-target = ["X86"]
-```
-
-Entry is regarded as "local" if there is `path` property, and "remote" if there is `url` property.
-Other options are common to "remote" entries.
+- **entry** describes how to compile LLVM/Clang
+- Two types of entries
+  - *Remote*: Download LLVM from Git/SVN repository or Tar archive, and then build
+  - *Local*: Build locally cloned LLVM source
+- See [the module document](https://docs.rs/llvmenv/*/llvmenv/entry/index.html) for detail
 
 build
 ------
-- "build" is a directory where compiled executables (e.g. clang) and libraries are installed.
+- **build** is a directory where compiled executables (e.g. clang) and libraries are installed.
 - They are compiled by `llvmenv build-entry`, and placed at `$XDG_DATA_HOME/llvmenv` (usually `$HOME/.local/share/llvmenv`).
 - There is a special build, "system", which uses system's executables.
 
