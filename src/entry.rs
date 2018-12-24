@@ -48,7 +48,7 @@
 //!
 //! There is also pre-defined entries corresponding to the LLVM/Clang releases:
 //!
-//! ```
+//! ```shell
 //! $ llvmenv entries
 //! llvm-mirror
 //! 7.0.0
