@@ -10,7 +10,7 @@ Manage multiple LLVM/Clang build
 
 Install
 -------
-0. Install cmake, make, and g++ (or clang++)
+0. Install cmake, builder (make/ninja), and C++ compiler (g++/clang++)
 1. Install Rust using [rustup](https://github.com/rust-lang-nursery/rustup.rs)
 2. `cargo install llvmenv`
 
