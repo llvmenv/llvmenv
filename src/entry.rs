@@ -1,4 +1,69 @@
-//! Manage entries, i.e. LLVM/Clang source to be built
+//! Describes how to compile LLVM/Clang
+//!
+//! entry.toml
+//! -----------
+//! **entry** in llvmenv describes how to compile LLVM/Clang, and set by `$XDG_CONFIG_HOME/llvmenv/entry.toml`.
+//! `llvmenv init` generates default setting:
+//!
+//! ```toml
+//! [llvm-mirror]
+//! url    = "https://github.com/llvm-mirror/llvm"
+//! target = ["X86"]
+//!
+//! [[llvm-mirror.tools]]
+//! name = "clang"
+//! url = "https://github.com/llvm-mirror/clang"
+//!
+//! [[llvm-mirror.tools]]
+//! name = "clang-extra"
+//! url = "https://github.com/llvm-mirror/clang-tools-extra"
+//! relative_path = "tools/clang/tools/extra"
+//! ```
+//!
+//! (TOML format has been changed largely at version 0.2.0)
+//!
+//! **tools** property means LLVM tools, e.g. clang, compiler-rt, lld, and so on.
+//! These will be downloaded into `${llvm-top}/tools/${tool-name}` by default,
+//! and `relative_path` property change it.
+//! This toml will be decoded into [EntrySetting][EntrySetting] and normalized into [Entry][Entry].
+//!
+//! [Entry]: ./enum.Entry.html
+//! [EntrySetting]: ./struct.EntrySetting.html
+//!
+//! Local entries (since v0.2.0)
+//! -------------
+//! Different from above *remote* entries, you can build locally cloned LLVM source with *local* entry.
+//!
+//! ```toml
+//! [my-local-llvm]
+//! path = "/path/to/your/src"
+//! target = ["X86"]
+//! ```
+//!
+//! Entry is regarded as *local* if there is `path` property, and *remote* if there is `url` property.
+//! Other options are common to *remote* entries.
+//!
+//! Pre-defined entries
+//! ------------------
+//!
+//! There is also pre-defined entries corresponding to the LLVM/Clang releases:
+//!
+//! ```shell
+//! $ llvmenv entries
+//! llvm-mirror
+//! 7.0.0
+//! 6.0.1
+//! 6.0.0
+//! 5.0.2
+//! 5.0.1
+//! 4.0.1
+//! 4.0.0
+//! 3.9.1
+//! 3.9.0
+//! ```
+//!
+//! These are compiled with the default setting as shown above. You have to create entry manually
+//! if you want to use custom settings.
 
 use failure::bail;
 use itertools::*;
@@ -90,10 +155,14 @@ impl Default for BuildType {
 /// LLVM Tools e.g. clang, compiler-rt, and so on.
 #[derive(Deserialize, Debug, Clone)]
 pub struct Tool {
-    name: String,
-    url: String,
-    branch: Option<String>,
-    relative_path: Option<String>,
+    /// Name of tool (will be downloaded into `tools/{name}` by default)
+    pub name: String,
+    /// URL for tool. Git/SVN repository or Tar archive are allowed.
+    pub url: String,
+    /// Git branch (not for SVN)
+    pub branch: Option<String>,
+    /// Relative install Path (see the example of clang-extra in [module level doc](index.html))
+    pub relative_path: Option<String>,
 }
 
 impl Tool {
@@ -129,6 +198,9 @@ pub struct EntrySetting {
     pub build_type: BuildType,
 }
 
+/// Describes how to compile LLVM/Clang
+///
+/// See also [module level document](index.html).
 #[derive(Debug)]
 pub enum Entry {
     Remote {
