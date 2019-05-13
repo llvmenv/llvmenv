@@ -65,8 +65,8 @@ impl Resource {
             if filename.ends_with(".git") {
                 info!("Find '.git' extension");
                 return Ok(Resource::Git {
-                    url: url_str.into(),
-                    branch: None,
+                    url: strip_branch_from_url(url_str)?,
+                    branch: get_branch_from_url(url_str)?,
                 });
             }
         }
@@ -77,8 +77,8 @@ impl Resource {
             if url.host_str() == Some(service) {
                 info!("URL is a cloud git service: {}", service);
                 return Ok(Resource::Git {
-                    url: url_str.into(),
-                    branch: None,
+                    url: strip_branch_from_url(url_str)?,
+                    branch: get_branch_from_url(url_str)?,
                 });
             }
         }
@@ -93,8 +93,8 @@ impl Resource {
             if url.path().starts_with("/git") {
                 info!("URL is LLVM Git repository");
                 return Ok(Resource::Git {
-                    url: url_str.into(),
-                    branch: None,
+                    url: strip_branch_from_url(url_str)?,
+                    branch: get_branch_from_url(url_str)?,
                 });
             }
         }
@@ -131,8 +131,8 @@ impl Resource {
             Ok(_) => {
                 info!("Git access succeeds");
                 Ok(Resource::Git {
-                    url: url_str.into(),
-                    branch: None,
+                    url: strip_branch_from_url(url_str)?,
+                    branch: get_branch_from_url(url_str)?,
                 })
             }
             Err(_) => {
@@ -224,6 +224,17 @@ fn get_filename_from_url(url_str: &str) -> Result<String> {
     Ok(filename.to_string())
 }
 
+fn get_branch_from_url(url_str: &str) -> Result<Option<String>> {
+    let url = ::url::Url::parse(url_str)?;
+    Ok(url.fragment().map(ToOwned::to_owned))
+}
+
+fn strip_branch_from_url(url_str: &str) -> Result<String> {
+    let mut url = ::url::Url::parse(url_str)?;
+    url.set_fragment(None);
+    Ok(url.into_string())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -261,6 +272,17 @@ mod tests {
     fn test_get_filename_from_url() {
         let url = "http://releases.llvm.org/6.0.1/llvm-6.0.1.src.tar.xz";
         assert_eq!(get_filename_from_url(url).unwrap(), "llvm-6.0.1.src.tar.xz");
+    }
+
+    #[test]
+    fn test_with_git_branches() {
+        let github_mirror = "https://github.com/llvm-mirror/llvm";
+        let git = Resource::from_url(github_mirror).unwrap();
+        assert_eq!(git, Resource::Git { url: github_mirror.into(), branch: None });
+        assert_eq!(Resource::from_url("https://github.com/llvm-mirror/llvm#release_80").unwrap(), Resource::Git {
+            url: "https://github.com/llvm-mirror/llvm".into(),
+            branch: Some("release_80".into())
+        });
     }
 
 }
