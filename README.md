@@ -4,7 +4,7 @@ llvmenv
 [![crate](https://img.shields.io/crates/v/llvmenv.svg)](https://crates.io/crates/llvmenv)
 [![docs.rs](https://docs.rs/llvmenv/badge.svg)](https://docs.rs/llvmenv)
 [![CircleCI](https://circleci.com/gh/termoshtt/llvmenv.svg?style=shield)](https://circleci.com/gh/termoshtt/llvmenv)
-[![Azure Pipeline](https://dev.azure.com/termoshtt2/GitHub%20CI/_apis/build/status/termoshtt.llvmenv)](https://dev.azure.com/termoshtt2/GitHub%20CI/_build/latest?definitionId=1)
+[![Build Status](https://dev.azure.com/termoshtt/llvmenv/_apis/build/status/termoshtt.llvmenv?branchName=master)](https://dev.azure.com/termoshtt/llvmenv/_build/latest?definitionId=1&branchName=master)
 
 Manage multiple LLVM/Clang build
 
