@@ -91,6 +91,8 @@ pub enum CMakeGenerator {
     Ninja,
     /// Visual Studio 15 2017
     VisualStudio,
+    /// Visual Studio 15 2017 Win64
+    VisualStudioWin64,
 }
 
 impl CMakeGenerator {
@@ -117,15 +119,20 @@ impl CMakeGenerator {
             CMakeGenerator::Makefile => vec!["-G", "Unix Makefiles"],
             CMakeGenerator::Ninja => vec!["-G", "Ninja"],
             CMakeGenerator::VisualStudio => vec!["-G", "Visual Studio 15 2017"],
+            CMakeGenerator::VisualStudioWin64 => vec!["-G", "Visual Studio 15 2017 Win64", "-Thost=x64"],
         }
         .into_iter()
         .map(|s| s.into())
         .collect()
     }
 
-    fn build_option(&self, nproc: usize) -> Vec<String> {
+    fn build_option(&self, nproc: usize, build_type: BuildType) -> Vec<String> {
         match self {
-            CMakeGenerator::VisualStudio | CMakeGenerator::Platform => Vec::new(),
+            CMakeGenerator::VisualStudioWin64|CMakeGenerator::VisualStudio => vec![
+                "--config".into(),
+                format!("{:?}", build_type)
+            ],
+            CMakeGenerator::Platform => Vec::new(),
             CMakeGenerator::Makefile | CMakeGenerator::Ninja => {
                 vec!["--".into(), "-j".into(), format!("{}", nproc)]
             }
@@ -140,7 +147,7 @@ impl Default for CMakeGenerator {
 }
 
 /// CMake build type
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone, Copy)]
 pub enum BuildType {
     Debug,
     Release,
@@ -422,7 +429,9 @@ impl Entry {
                 "--target",
                 "install",
             ])
-            .args(&self.setting().builder.build_option(nproc))
+            .args(&self.setting().builder.build_option(
+                nproc,
+                self.setting().build_type))
             .check_run()?;
         Ok(())
     }
