@@ -119,7 +119,7 @@ impl Build {
 }
 
 fn parse_version(version: &str) -> Result<(u32, u32, u32)> {
-    let cap = Regex::new(r"(\d).(\d).(\d)")
+    let cap = Regex::new(r"(\d+).(\d).(\d)")
         .unwrap()
         .captures(version)
         .ok_or(err_msg("Failed to parse $(clang --version) output"))?;
@@ -225,6 +225,12 @@ mod tests {
         assert_eq!(major, 6);
         assert_eq!(minor, 0);
         assert_eq!(patch, 1);
+        let version = "clang version 10.0.0 \
+            (https://github.com/llvm-mirror/clang 65acf43270ea2894dffa0d0b292b92402f80c8cb)";
+        let (major, minor, patch) = parse_version(version)?;
+        assert_eq!(major, 10);
+        assert_eq!(minor, 0);
+        assert_eq!(patch, 0);
         Ok(())
     }
 }
