@@ -119,7 +119,9 @@ impl CMakeGenerator {
             CMakeGenerator::Makefile => vec!["-G", "Unix Makefiles"],
             CMakeGenerator::Ninja => vec!["-G", "Ninja"],
             CMakeGenerator::VisualStudio => vec!["-G", "Visual Studio 15 2017"],
-            CMakeGenerator::VisualStudioWin64 => vec!["-G", "Visual Studio 15 2017 Win64", "-Thost=x64"],
+            CMakeGenerator::VisualStudioWin64 => {
+                vec!["-G", "Visual Studio 15 2017 Win64", "-Thost=x64"]
+            }
         }
         .into_iter()
         .map(|s| s.into())
@@ -128,10 +130,9 @@ impl CMakeGenerator {
 
     fn build_option(&self, nproc: usize, build_type: BuildType) -> Vec<String> {
         match self {
-            CMakeGenerator::VisualStudioWin64|CMakeGenerator::VisualStudio => vec![
-                "--config".into(),
-                format!("{:?}", build_type)
-            ],
+            CMakeGenerator::VisualStudioWin64 | CMakeGenerator::VisualStudio => {
+                vec!["--config".into(), format!("{:?}", build_type)]
+            }
             CMakeGenerator::Platform => Vec::new(),
             CMakeGenerator::Makefile | CMakeGenerator::Ninja => {
                 vec!["--".into(), "-j".into(), format!("{}", nproc)]
@@ -186,6 +187,8 @@ impl Tool {
 pub struct EntrySetting {
     /// URL of remote LLVM resource, see also [resouce](../resource/index.html) module
     pub url: Option<String>,
+    /// The relative path to the LLVM source, used if the URL used points to a root project in which the LLVM source is contained.
+    pub relative_path: Option<PathBuf>,
     /// Path of local LLVM source dir
     pub path: Option<String>,
     /// Additional LLVM Tools, e.g. clang, openmp, lld, and so on.
@@ -214,6 +217,7 @@ pub enum Entry {
         name: String,
         url: String,
         tools: Vec<Tool>,
+        relative_path: Option<PathBuf>,
         setting: EntrySetting,
     },
     Local {
@@ -242,6 +246,7 @@ impl Entry {
             return Ok(Entry::Remote {
                 name: name.into(),
                 url: url.clone(),
+                relative_path: setting.relative_path.clone(),
                 tools: setting.tools.clone(),
                 setting,
             });
@@ -271,7 +276,7 @@ fn official_releases() -> Result<Vec<Entry>> {
         (3, 9, 1),
         (3, 9, 0),
     ]
-    .into_iter()
+    .iter()
     .map(|(major, minor, patch)| {
         let version = format!("{}.{}.{}", major, minor, patch);
         let mut setting = EntrySetting::default();
@@ -396,7 +401,18 @@ impl Entry {
 
     pub fn src_dir(&self) -> Result<PathBuf> {
         Ok(match self {
-            Entry::Remote { name, .. } => cache_dir()?.join(name),
+            Entry::Remote {
+                name,
+                relative_path,
+                ..
+            } => {
+                if let Some(relative_path) = relative_path {
+                    cache_dir()?.join(name).join(relative_path)
+                } else {
+                    cache_dir()?.join(name)
+                }
+            }
+
             Entry::Local { path, .. } => path.into(),
         })
     }
@@ -429,9 +445,12 @@ impl Entry {
                 "--target",
                 "install",
             ])
-            .args(&self.setting().builder.build_option(
-                nproc,
-                self.setting().build_type))
+            .args(
+                &self
+                    .setting()
+                    .builder
+                    .build_option(nproc, self.setting().build_type),
+            )
             .check_run()?;
         Ok(())
     }
@@ -475,6 +494,7 @@ mod tests {
             option: Default::default(),
             builder: Default::default(),
             build_type: Default::default(),
+            relative_path: None,
             target: Default::default(),
         };
         assert!(Entry::parse_setting("no_entry", setting).is_err());
@@ -486,6 +506,7 @@ mod tests {
             option: Default::default(),
             builder: Default::default(),
             build_type: Default::default(),
+            relative_path: None,
             target: Default::default(),
         };
         assert!(Entry::parse_setting("duplicated", setting).is_err());

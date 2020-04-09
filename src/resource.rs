@@ -278,11 +278,19 @@ mod tests {
     fn test_with_git_branches() {
         let github_mirror = "https://github.com/llvm-mirror/llvm";
         let git = Resource::from_url(github_mirror).unwrap();
-        assert_eq!(git, Resource::Git { url: github_mirror.into(), branch: None });
-        assert_eq!(Resource::from_url("https://github.com/llvm-mirror/llvm#release_80").unwrap(), Resource::Git {
-            url: "https://github.com/llvm-mirror/llvm".into(),
-            branch: Some("release_80".into())
-        });
+        assert_eq!(
+            git,
+            Resource::Git {
+                url: github_mirror.into(),
+                branch: None
+            }
+        );
+        assert_eq!(
+            Resource::from_url("https://github.com/llvm-mirror/llvm#release_80").unwrap(),
+            Resource::Git {
+                url: "https://github.com/llvm-mirror/llvm".into(),
+                branch: Some("release_80".into())
+            }
+        );
     }
-
 }
