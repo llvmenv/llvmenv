@@ -352,7 +352,7 @@ impl Entry {
             Entry::Remote { url, tools, .. } => {
                 if !self.src_dir()?.is_dir() {
                     let src = Resource::from_url(url)?;
-                    src.download(&self.src_dir()?)?;
+                    src.download(&self.root_src_dir()?)?;
                 }
                 for tool in tools {
                     let path = self.src_dir()?.join(tool.rel_path());
@@ -397,6 +397,14 @@ impl Entry {
             Entry::Remote { name, .. } => name,
             Entry::Local { name, .. } => name,
         }
+    }
+
+    pub fn root_src_dir(&self) -> Result<PathBuf> {
+        Ok(match self {
+            Entry::Remote { name, .. } => cache_dir()?.join(name),
+
+            Entry::Local { path, .. } => path.into(),
+        })
     }
 
     pub fn src_dir(&self) -> Result<PathBuf> {
