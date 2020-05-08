@@ -1,6 +1,6 @@
 //! Manage LLVM/Clang builds
 
-use failure::{err_msg, format_err};
+use anyhow::format_err;
 use glob::glob;
 use log::*;
 use regex::Regex;
@@ -107,12 +107,7 @@ impl Build {
         let output = Command::new(self.prefix().join("bin").join("clang"))
             .arg("--version")
             .output()
-            .map_err(|_| {
-                err_msg(format!(
-                    "{}/bin/clang is not found",
-                    self.prefix().display()
-                ))
-            })?;
+            .map_err(|_| format_err!("{}/bin/clang is not found", self.prefix().display()))?;
         let output = ::std::str::from_utf8(&output.stdout)?;
         parse_version(output)
     }
@@ -122,7 +117,7 @@ fn parse_version(version: &str) -> Result<(u32, u32, u32)> {
     let cap = Regex::new(r"(\d+).(\d).(\d)")
         .unwrap()
         .captures(version)
-        .ok_or(err_msg("Failed to parse $(clang --version) output"))?;
+        .ok_or(format_err!("Failed to parse $(clang --version) output"))?;
     let major = cap[1]
         .parse()
         .map_err(|e| format_err!("Fail to parse major version: {:?}", e))?;
@@ -199,10 +194,7 @@ pub fn seek_build() -> Result<Build> {
 
 pub fn expand(archive: &Path, verbose: bool) -> Result<()> {
     if !archive.exists() {
-        return Err(err_msg(format!(
-            "Archive does not found: {}",
-            archive.display()
-        )));
+        return Err(format_err!("Archive does not found: {}", archive.display()));
     }
     Command::new("tar")
         .arg(if verbose { "xvf" } else { "xf" })

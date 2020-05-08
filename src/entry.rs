@@ -65,7 +65,7 @@
 //! These are compiled with the default setting as shown above. You have to create entry manually
 //! if you want to use custom settings.
 
-use failure::bail;
+use anyhow::bail;
 use itertools::*;
 use log::{info, warn};
 use serde_derive::Deserialize;

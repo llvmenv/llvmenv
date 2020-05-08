@@ -1,7 +1,7 @@
 use llvmenv::error::CommandExt;
 use llvmenv::*;
 
-use failure::bail;
+use anyhow::bail;
 use std::env;
 use std::path::PathBuf;
 use std::process::{exit, Command};
