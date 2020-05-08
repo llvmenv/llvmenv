@@ -16,6 +16,7 @@ jobs:
         command: install
         args: --path . -f
     - run: |
+        llvmenv init
         llvmenv build-entry 10.0.0
 
   build_9_0_1:
@@ -27,6 +28,7 @@ jobs:
         command: install
         args: --path . -f
     - run: |
+        llvmenv init
         llvmenv build-entry 9.0.1
 
   build_8_0_1:
@@ -38,4 +40,5 @@ jobs:
         command: install
         args: --path . -f
     - run: |
+        llvmenv init
         llvmenv build-entry 8.0.1
