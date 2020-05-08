@@ -174,7 +174,7 @@ impl Resource {
                 fs::create_dir_all(&working)?;
                 let filename = get_filename_from_url(url)?;
                 let path = working.join(&filename);
-                let mut req = reqwest::get(url)?;
+                let mut req = reqwest::blocking::get(url)?;
                 let mut f = fs::File::create(&path)?;
                 req.copy_to(&mut f)?;
                 Command::new("tar")
