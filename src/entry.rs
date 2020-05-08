@@ -272,7 +272,7 @@ fn official_releases() -> Result<Vec<Entry>> {
         (3, 9, 1),
         (3, 9, 0),
     ]
-    .into_iter()
+    .iter()
     .map(|(major, minor, patch)| {
         let version = format!("{}.{}.{}", major, minor, patch);
         let mut setting = EntrySetting::default();
