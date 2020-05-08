@@ -11,7 +11,7 @@ use structopt::StructOpt;
 #[structopt(
     name = "llvmenv",
     about = "Manage multiple LLVM/Clang builds",
-    raw(setting = "structopt::clap::AppSettings::ColoredHelp")
+    setting = structopt::clap::AppSettings::ColoredHelp
 )]
 enum LLVMEnv {
     #[structopt(name = "init", about = "Initialize llvmenv")]
