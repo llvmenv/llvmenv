@@ -1,0 +1,38 @@
+name: "Build LLVM"
+
+on:
+  push:
+    branches:
+      - master
+  pull_request: {}
+
+jobs:
+  build-10.0.0:
+    runs-on: ubuntu-18.04
+    steps:
+    - uses: actions/checkout@v1
+    - uses: actions-rs/cargo@v1
+      with:
+        command: install --path . -f
+    - run: |
+        llvmenv build-entry 10.0.0
+
+  build-9.0.1:
+    runs-on: ubuntu-18.04
+    steps:
+    - uses: actions/checkout@v1
+    - uses: actions-rs/cargo@v1
+      with:
+        command: install --path . -f
+    - run: |
+        llvmenv build-entry 9.0.1
+
+  build-8.0.1:
+    runs-on: ubuntu-18.04
+    steps:
+    - uses: actions/checkout@v1
+    - uses: actions-rs/cargo@v1
+      with:
+        command: install --path . -f
+    - run: |
+        llvmenv build-entry 8.0.1
