@@ -7,7 +7,7 @@ on:
   pull_request: {}
 
 jobs:
-  build-10.0.0:
+  build_10_0_0:
     runs-on: ubuntu-18.04
     steps:
     - uses: actions/checkout@v1
@@ -17,7 +17,7 @@ jobs:
     - run: |
         llvmenv build-entry 10.0.0
 
-  build-9.0.1:
+  build_9_0_1:
     runs-on: ubuntu-18.04
     steps:
     - uses: actions/checkout@v1
@@ -27,7 +27,7 @@ jobs:
     - run: |
         llvmenv build-entry 9.0.1
 
-  build-8.0.1:
+  build_8_0_1:
     runs-on: ubuntu-18.04
     steps:
     - uses: actions/checkout@v1
