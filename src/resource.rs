@@ -1,6 +1,6 @@
 //! Get remote LLVM/Clang source
 
-use failure::{bail, err_msg};
+use anyhow::{bail, format_err};
 use log::info;
 use reqwest;
 use std::fs;
@@ -219,8 +219,10 @@ impl Resource {
 
 fn get_filename_from_url(url_str: &str) -> Result<String> {
     let url = ::url::Url::parse(url_str)?;
-    let seg = url.path_segments().ok_or(err_msg("URL parse failed"))?;
-    let filename = seg.last().ok_or(err_msg("URL is invalid"))?;
+    let seg = url
+        .path_segments()
+        .ok_or(format_err!("URL parse failed: {}", url))?;
+    let filename = seg.last().ok_or(format_err!("URL is invalid: {}", url))?;
     Ok(filename.to_string())
 }
 

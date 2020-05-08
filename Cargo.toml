@@ -14,9 +14,10 @@ categories    = []
 edition = '2018'
 
 [dependencies]
+anyhow = "1.0"
+thiserror = "1.0"
 dirs = "2.0"
 env_logger = "0.7"
-failure = "0.1"
 fs_extra = "1.1"
 glob = "0.3"
 itertools = "0.9"
@@ -26,8 +27,8 @@ regex = "1"
 reqwest = { version = "0.10.4", features = ["blocking"]}
 serde = "1"
 serde_derive = "1"
-structopt = "0.3"
 shellexpand = "2"
+structopt = "0.3"
 tempfile= "3"
 toml = "0.5"
 url = "2"

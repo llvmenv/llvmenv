@@ -1,16 +1,17 @@
-use failure::{Error, Fail};
+use anyhow::Error;
 use std::process;
+use thiserror::Error;
 
 pub type Result<T> = ::std::result::Result<T, Error>;
 pub type CommandResult = ::std::result::Result<(), CommandError>;
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum CommandError {
-    #[fail(display = "Exit with error-code({}): {}", errno, cmd)]
+    #[error("Exit with error-code({errno}): {cmd}")]
     ErrorCode { errno: i32, cmd: String },
-    #[fail(display = "External command not found: {}", cmd)]
+    #[error("External command not found: {cmd}")]
     CommandNotFound { cmd: String },
-    #[fail(display = "Terminated by signal: {}", cmd)]
+    #[error("Terminated by signal: {cmd}")]
     TerminatedBySignal { cmd: String },
 }
 
