@@ -119,7 +119,9 @@ impl CMakeGenerator {
             CMakeGenerator::Makefile => vec!["-G", "Unix Makefiles"],
             CMakeGenerator::Ninja => vec!["-G", "Ninja"],
             CMakeGenerator::VisualStudio => vec!["-G", "Visual Studio 15 2017"],
-            CMakeGenerator::VisualStudioWin64 => vec!["-G", "Visual Studio 15 2017 Win64", "-Thost=x64"],
+            CMakeGenerator::VisualStudioWin64 => {
+                vec!["-G", "Visual Studio 15 2017 Win64", "-Thost=x64"]
+            }
         }
         .into_iter()
         .map(|s| s.into())
@@ -128,10 +130,9 @@ impl CMakeGenerator {
 
     fn build_option(&self, nproc: usize, build_type: BuildType) -> Vec<String> {
         match self {
-            CMakeGenerator::VisualStudioWin64|CMakeGenerator::VisualStudio => vec![
-                "--config".into(),
-                format!("{:?}", build_type)
-            ],
+            CMakeGenerator::VisualStudioWin64 | CMakeGenerator::VisualStudio => {
+                vec!["--config".into(), format!("{:?}", build_type)]
+            }
             CMakeGenerator::Platform => Vec::new(),
             CMakeGenerator::Makefile | CMakeGenerator::Ninja => {
                 vec!["--".into(), "-j".into(), format!("{}", nproc)]
@@ -429,9 +430,12 @@ impl Entry {
                 "--target",
                 "install",
             ])
-            .args(&self.setting().builder.build_option(
-                nproc,
-                self.setting().build_type))
+            .args(
+                &self
+                    .setting()
+                    .builder
+                    .build_option(nproc, self.setting().build_type),
+            )
             .check_run()?;
         Ok(())
     }
