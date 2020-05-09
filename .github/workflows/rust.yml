@@ -40,7 +40,7 @@ jobs:
         command: fmt
         args: -- --check
 
-  clippy_check:
+  check-clippy:
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v1
