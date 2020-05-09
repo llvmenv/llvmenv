@@ -1,7 +1,6 @@
 use llvmenv::error::CommandExt;
 use llvmenv::*;
 
-use anyhow::bail;
 use std::env;
 use std::path::PathBuf;
 use std::process::{exit, Command};
@@ -122,7 +121,7 @@ fn main() -> error::Result<()> {
                     println!("{}", entry.name());
                 }
             } else {
-                bail!("No entries. Please define entries in $XDG_CONFIG_HOME/llvmenv/entry.toml");
+                panic!("No entries. Please define entries in $XDG_CONFIG_HOME/llvmenv/entry.toml");
             }
         }
         LLVMEnv::BuildEntry {
@@ -203,7 +202,7 @@ fn main() -> error::Result<()> {
         }
         LLVMEnv::Local { name, path } => {
             let build = get_existing_build(&name);
-            let path = path.unwrap_or(env::current_dir()?);
+            let path = path.unwrap_or(env::current_dir().unwrap());
             build.set_local(&path)?;
         }
 
