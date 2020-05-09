@@ -1,6 +1,6 @@
 //! Get remote LLVM/Clang source
 
-use log::info;
+use log::*;
 use reqwest;
 use std::{fs, io, path::*, process::Command};
 use tempfile::TempDir;
@@ -45,7 +45,7 @@ impl Resource {
         if let Ok(filename) = get_filename_from_url(url_str) {
             for ext in &[".tar.gz", ".tar.xz", ".tar.bz2", ".tar.Z", ".tgz", ".taz"] {
                 if filename.ends_with(ext) {
-                    info!("Find archive extension '{}' at the end of URL", ext);
+                    debug!("Find archive extension '{}' at the end of URL", ext);
                     return Ok(Resource::Tar {
                         url: url_str.into(),
                     });
@@ -53,14 +53,14 @@ impl Resource {
             }
 
             if filename.ends_with("trunk") {
-                info!("Find 'trunk' at the end of URL");
+                debug!("Find 'trunk' at the end of URL");
                 return Ok(Resource::Svn {
                     url: url_str.into(),
                 });
             }
 
             if filename.ends_with(".git") {
-                info!("Find '.git' extension");
+                debug!("Find '.git' extension");
                 return Ok(Resource::Git {
                     url: strip_branch_from_url(url_str)?,
                     branch: get_branch_from_url(url_str)?,
@@ -74,7 +74,7 @@ impl Resource {
         })?;
         for service in &["github.com", "gitlab.com"] {
             if url.host_str() == Some(service) {
-                info!("URL is a cloud git service: {}", service);
+                debug!("URL is a cloud git service: {}", service);
                 return Ok(Resource::Git {
                     url: strip_branch_from_url(url_str)?,
                     branch: get_branch_from_url(url_str)?,
@@ -84,13 +84,13 @@ impl Resource {
 
         if url.host_str() == Some("llvm.org") {
             if url.path().starts_with("/svn") {
-                info!("URL is LLVM SVN repository");
+                debug!("URL is LLVM SVN repository");
                 return Ok(Resource::Svn {
                     url: url_str.into(),
                 });
             }
             if url.path().starts_with("/git") {
-                info!("URL is LLVM Git repository");
+                debug!("URL is LLVM Git repository");
                 return Ok(Resource::Git {
                     url: strip_branch_from_url(url_str)?,
                     branch: get_branch_from_url(url_str)?,
@@ -108,7 +108,7 @@ impl Resource {
         // git remote add $url
         // git ls-remote       # This must fail for SVN repo
         // ```
-        info!("Try access with git to {}", url_str);
+        debug!("Try access with git to {}", url_str);
         let tmp_dir = TempDir::new().with("/tmp")?;
         Command::new("git")
             .arg("init")
@@ -128,14 +128,14 @@ impl Resource {
             .check_run()
         {
             Ok(_) => {
-                info!("Git access succeeds");
+                debug!("Git access succeeds");
                 Ok(Resource::Git {
                     url: strip_branch_from_url(url_str)?,
                     branch: get_branch_from_url(url_str)?,
                 })
             }
             Err(_) => {
-                info!("Git access failed. Regarded as a SVN repository.");
+                debug!("Git access failed. Regarded as a SVN repository.");
                 Ok(Resource::Svn {
                     url: url_str.into(),
                 })

@@ -1,9 +1,12 @@
 use llvmenv::error::CommandExt;
 use llvmenv::*;
 
-use std::env;
-use std::path::PathBuf;
-use std::process::{exit, Command};
+use simplelog::*;
+use std::{
+    env,
+    path::PathBuf,
+    process::{exit, Command},
+};
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
@@ -97,7 +100,13 @@ enum LLVMEnv {
 }
 
 fn main() -> error::Result<()> {
-    env_logger::init();
+    TermLogger::init(
+        LevelFilter::Info,
+        ConfigBuilder::new().set_time_to_local(true).build(),
+        TerminalMode::Mixed,
+    )
+    .unwrap();
+
     let opt = LLVMEnv::from_args();
     match opt {
         LLVMEnv::Init {} => config::init_config()?,
