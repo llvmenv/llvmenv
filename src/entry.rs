@@ -268,7 +268,7 @@ fn load_entry_toml(toml_str: &str) -> Result<Vec<Entry>> {
         .collect()
 }
 
-fn official_releases() -> Result<Vec<Entry>> {
+pub fn official_releases() -> Vec<Entry> {
     [
         (10, 0, 0),
         (9, 0, 1),
@@ -314,7 +314,7 @@ fn official_releases() -> Result<Vec<Entry>> {
             relative_path: None,
         };
         setting.tools = vec![clang, lld];
-        Entry::parse_setting(&version, setting)
+        Entry::parse_setting(&version, setting).unwrap()
     })
     .collect()
 }
@@ -322,7 +322,7 @@ fn official_releases() -> Result<Vec<Entry>> {
 pub fn load_entries() -> Result<Vec<Entry>> {
     let global_toml = config_dir()?.join(ENTRY_TOML);
     let mut entries = load_entry_toml(&fs::read_to_string(&global_toml).with(&global_toml)?)?;
-    let mut official = official_releases()?;
+    let mut official = official_releases();
     entries.append(&mut official);
     Ok(entries)
 }
@@ -487,29 +487,45 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_setting() -> Result<()> {
+    fn parse_url() {
         let setting = EntrySetting {
-            url: None,
-            path: None,
-            tools: Default::default(),
-            option: Default::default(),
-            generator: Default::default(),
-            build_type: Default::default(),
-            target: Default::default(),
+            url: Some("http://llvm.org/svn/llvm-project/llvm/trunk".into()),
+            ..Default::default()
         };
-        assert!(Entry::parse_setting("no_entry", setting).is_err());
+        let _entry = Entry::parse_setting("url", setting).unwrap();
+    }
 
+    #[test]
+    fn parse_path() {
+        let setting = EntrySetting {
+            path: Some("~/.config/llvmenv".into()),
+            ..Default::default()
+        };
+        let _entry = Entry::parse_setting("path", setting).unwrap();
+    }
+
+    #[should_panic]
+    #[test]
+    fn parse_no_entry() {
+        let setting = EntrySetting::default();
+        let _entry = Entry::parse_setting("no_entry", setting).unwrap();
+    }
+
+    #[should_panic]
+    #[test]
+    fn parse_duplicated() {
         let setting = EntrySetting {
             url: Some("http://llvm.org/svn/llvm-project/llvm/trunk".into()),
             path: Some("~/.config/llvmenv".into()),
-            tools: Default::default(),
-            option: Default::default(),
-            generator: Default::default(),
-            build_type: Default::default(),
-            target: Default::default(),
+            ..Default::default()
         };
-        assert!(Entry::parse_setting("duplicated", setting).is_err());
+        let _entry = Entry::parse_setting("duplicated", setting).unwrap();
+    }
 
-        Ok(())
+    #[test]
+    fn checkout_official_releases() {
+        for entry in official_releases() {
+            entry.checkout().unwrap()
+        }
     }
 }
