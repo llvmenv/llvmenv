@@ -158,7 +158,8 @@ impl Resource {
             Resource::Git { url, branch } => {
                 info!("Git clone {}", url);
                 let mut git = Command::new("git");
-                git.args(&["clone", url.as_str(), "--depth", "1"]).arg(dest);
+                git.args(&["clone", url.as_str(), "-q", "--depth", "1"])
+                    .arg(dest);
                 if let Some(branch) = branch {
                     git.args(&["-b", branch]);
                 }

@@ -1,4 +1,3 @@
-use dirs;
 use log::info;
 use std::fs;
 use std::io::Write;
@@ -6,8 +5,8 @@ use std::path::PathBuf;
 
 use crate::error::*;
 
-pub const APP_NAME: &'static str = "llvmenv";
-pub const ENTRY_TOML: &'static str = "entry.toml";
+pub const APP_NAME: &str = "llvmenv";
+pub const ENTRY_TOML: &str = "entry.toml";
 
 const LLVM_MIRROR: &str = include_str!("llvm-mirror.toml");
 
