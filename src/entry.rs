@@ -269,11 +269,41 @@ fn load_entry_toml(toml_str: &str) -> Result<Vec<Entry>> {
 }
 
 pub fn official_releases() -> Vec<Entry> {
-    [
-        (10, 0, 0),
-        (9, 0, 1),
+    let mut github: Vec<Entry> = [(10, 0, 0), (9, 0, 1), (8, 0, 1)]
+        .iter()
+        .map(|&(major, minor, patch)| {
+            let version = format!("{}.{}.{}", major, minor, patch);
+            let mut setting = EntrySetting::default();
+            setting.url = Some(format!(
+                "https://github.com/llvm/llvm-project/releases/download/llvmorg-{version}/llvm-{version}.src.tar.xz",
+                version = version
+            ));
+            let clang = Tool {
+                name: "clang".into(),
+                url: format!(
+                    "https://github.com/llvm/llvm-project/releases/download/llvmorg-{version}/{clang}-{version}.src.tar.xz",
+                    version = version,
+                    clang = if major > 8 { "clang" } else { "cfe" }
+                ),
+                branch: None,
+                relative_path: None,
+            };
+            let lld = Tool {
+                name: "lld".into(),
+                url: format!(
+                    "https://github.com/llvm/llvm-project/releases/download/llvmorg-{version}/lld-{version}.src.tar.xz",
+                    version = version
+                ),
+                branch: None,
+                relative_path: None,
+            };
+            setting.tools = vec![clang, lld];
+            Entry::parse_setting(&version, setting).unwrap()
+        })
+        .collect();
+
+    let mut llvm_org: Vec<Entry> = [
         (9, 0, 0),
-        (8, 0, 1),
         (8, 0, 0),
         (7, 1, 0),
         (7, 0, 1),
@@ -316,7 +346,9 @@ pub fn official_releases() -> Vec<Entry> {
         setting.tools = vec![clang, lld];
         Entry::parse_setting(&version, setting).unwrap()
     })
-    .collect()
+    .collect();
+    github.append(&mut llvm_org);
+    github
 }
 
 pub fn load_entries() -> Result<Vec<Entry>> {
@@ -521,6 +553,7 @@ mod tests {
     macro_rules! checkout {
         ($index:expr, $major:expr, $minor:expr, $patch: expr) => {
             paste::item! {
+                #[ignore]
                 #[test]
                 fn [< checkout_ $major _ $minor _ $patch >]() {
                     official_releases()[$index].checkout().unwrap();
@@ -531,8 +564,8 @@ mod tests {
 
     checkout!(0, 10, 0, 0);
     checkout!(1, 9, 0, 1);
-    checkout!(2, 9, 0, 0);
-    checkout!(3, 8, 0, 1);
+    checkout!(2, 8, 0, 1);
+    checkout!(3, 9, 0, 0);
     checkout!(4, 8, 0, 0);
     checkout!(5, 7, 1, 0);
     checkout!(6, 7, 0, 1);
