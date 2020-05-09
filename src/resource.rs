@@ -1,11 +1,8 @@
 //! Get remote LLVM/Clang source
 
-use anyhow::{bail, format_err};
 use log::info;
 use reqwest;
-use std::fs;
-use std::path::*;
-use std::process::Command;
+use std::{fs, io, path::*, process::Command};
 use tempfile::TempDir;
 use url::Url;
 
@@ -72,7 +69,9 @@ impl Resource {
         }
 
         // Hostname
-        let url = Url::parse(url_str)?;
+        let url = Url::parse(url_str).map_err(|_| Error::InvalidUrl {
+            url: url_str.into(),
+        })?;
         for service in &["github.com", "gitlab.com"] {
             if url.host_str() == Some(service) {
                 info!("URL is a cloud git service: {}", service);
@@ -110,7 +109,7 @@ impl Resource {
         // git ls-remote       # This must fail for SVN repo
         // ```
         info!("Try access with git to {}", url_str);
-        let tmp_dir = TempDir::new()?;
+        let tmp_dir = TempDir::new().with("/tmp")?;
         Command::new("git")
             .arg("init")
             .current_dir(tmp_dir.path())
@@ -146,13 +145,10 @@ impl Resource {
 
     pub fn download(&self, dest: &Path) -> Result<()> {
         if !dest.exists() {
-            fs::create_dir_all(dest)?;
+            fs::create_dir_all(dest).with(dest)?;
         }
         if !dest.is_dir() {
-            bail!(
-                "Download destination must be a directory: {}",
-                dest.display()
-            );
+            return Err(io::Error::new(io::ErrorKind::Other, "Not a directory")).with(dest);
         }
         match self {
             Resource::Svn { url, .. } => Command::new("svn")
@@ -171,29 +167,31 @@ impl Resource {
             Resource::Tar { url } => {
                 info!("Download Tar file: {}", url);
                 let working = cache_dir()?.join(".tar_download");
-                fs::create_dir_all(&working)?;
+                fs::create_dir_all(&working).with(&working)?;
                 let filename = get_filename_from_url(url)?;
                 let path = working.join(&filename);
                 let mut req = reqwest::blocking::get(url)?;
-                let mut f = fs::File::create(&path)?;
+                let mut f = fs::File::create(&path).with(path)?;
                 req.copy_to(&mut f)?;
                 Command::new("tar")
                     .arg("xf")
                     .arg(filename)
                     .current_dir(&working)
                     .check_run()?;
-                let d = fs::read_dir(&working)?
+                let d = fs::read_dir(&working)
+                    .with(working)?
                     .map(|d| d.unwrap())
                     .filter(|d| d.file_type().unwrap().is_dir())
                     .nth(0)
-                    .expect("Archive does not contains file");
-                for contents in fs::read_dir(d.path())? {
-                    let path = contents?.path();
+                    .expect("Archive does not contains file")
+                    .path();
+                for contents in fs::read_dir(&d).with(&d)? {
+                    let path = contents.with(&d)?.path();
                     if path.is_dir() {
                         let opt = fs_extra::dir::CopyOptions::new();
                         fs_extra::dir::copy(path, dest, &opt)?;
                     } else {
-                        fs::copy(&path, dest.join(path.file_name().unwrap()))?;
+                        fs::copy(&path, dest.join(path.file_name().unwrap())).with(&d)?;
                     }
                 }
             }
@@ -218,21 +216,29 @@ impl Resource {
 }
 
 fn get_filename_from_url(url_str: &str) -> Result<String> {
-    let url = ::url::Url::parse(url_str)?;
-    let seg = url
-        .path_segments()
-        .ok_or(format_err!("URL parse failed: {}", url))?;
-    let filename = seg.last().ok_or(format_err!("URL is invalid: {}", url))?;
+    let url = ::url::Url::parse(url_str).map_err(|_| Error::InvalidUrl {
+        url: url_str.into(),
+    })?;
+    let seg = url.path_segments().ok_or(Error::InvalidUrl {
+        url: url_str.into(),
+    })?;
+    let filename = seg.last().ok_or(Error::InvalidUrl {
+        url: url_str.into(),
+    })?;
     Ok(filename.to_string())
 }
 
 fn get_branch_from_url(url_str: &str) -> Result<Option<String>> {
-    let url = ::url::Url::parse(url_str)?;
+    let url = ::url::Url::parse(url_str).map_err(|_| Error::InvalidUrl {
+        url: url_str.into(),
+    })?;
     Ok(url.fragment().map(ToOwned::to_owned))
 }
 
 fn strip_branch_from_url(url_str: &str) -> Result<String> {
-    let mut url = ::url::Url::parse(url_str)?;
+    let mut url = ::url::Url::parse(url_str).map_err(|_| Error::InvalidUrl {
+        url: url_str.into(),
+    })?;
     url.set_fragment(None);
     Ok(url.into_string())
 }
@@ -248,7 +254,7 @@ mod tests {
             url: "http://github.com/termoshtt/llvmenv".into(),
             branch: None,
         };
-        let tmp_dir = TempDir::new()?;
+        let tmp_dir = TempDir::new().with("/tmp")?;
         git.download(tmp_dir.path())?;
         let cargo_toml = tmp_dir.path().join("Cargo.toml");
         assert!(cargo_toml.exists());
@@ -262,7 +268,7 @@ mod tests {
         };
         let tmp_dir = cache_dir()?.join("_llvmenv_test");
         if tmp_dir.exists() {
-            fs::remove_dir_all(&tmp_dir)?;
+            fs::remove_dir_all(&tmp_dir).with(&tmp_dir)?;
         }
         tar.download(&tmp_dir)?;
         let cargo_toml = tmp_dir.join("Cargo.toml");

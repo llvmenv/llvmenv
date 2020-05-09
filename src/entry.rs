@@ -65,7 +65,6 @@
 //! These are compiled with the default setting as shown above. You have to create entry manually
 //! if you want to use custom settings.
 
-use anyhow::bail;
 use itertools::*;
 use log::{info, warn};
 use serde_derive::Deserialize;
@@ -87,7 +86,7 @@ pub enum CMakeGenerator {
     Platform,
     /// Unix Makefile
     Makefile,
-    /// Ninja builder
+    /// Ninja generator
     Ninja,
     /// Visual Studio 15 2017
     VisualStudio,
@@ -104,12 +103,16 @@ impl CMakeGenerator {
     /// assert_eq!(CMakeGenerator::from_str("VisualStudio").unwrap(), CMakeGenerator::VisualStudio);
     /// assert!(CMakeGenerator::from_str("Unknown").is_err());
     /// ```
-    pub fn from_str(builder: &str) -> Result<Self> {
-        Ok(match builder.to_ascii_lowercase().as_str() {
+    pub fn from_str(generator: &str) -> Result<Self> {
+        Ok(match generator.to_ascii_lowercase().as_str() {
             "makefile" => CMakeGenerator::Makefile,
             "ninja" => CMakeGenerator::Ninja,
             "visualstudio" | "vs" => CMakeGenerator::VisualStudio,
-            _ => bail!("Unsupported Generator: {}", builder),
+            _ => {
+                return Err(Error::UnsupportedGenerator {
+                    generator: generator.into(),
+                });
+            }
         })
     }
 
@@ -200,7 +203,7 @@ pub struct EntrySetting {
     pub option: HashMap<String, String>,
     /// CMake Generator option (-G option in cmake)
     #[serde(default)]
-    pub builder: CMakeGenerator,
+    pub generator: CMakeGenerator,
     ///  Option for `CMAKE_BUILD_TYPE`
     #[serde(default)]
     pub build_type: BuildType,
@@ -227,7 +230,10 @@ pub enum Entry {
 impl Entry {
     fn parse_setting(name: &str, setting: EntrySetting) -> Result<Self> {
         if setting.path.is_some() && setting.url.is_some() {
-            bail!("One of Path or URL are allowed");
+            return Err(Error::InvalidEntry {
+                name: name.into(),
+                message: "One of Path or URL are allowed".into(),
+            });
         }
         if let Some(path) = &setting.path {
             if setting.tools.len() > 0 {
@@ -235,7 +241,7 @@ impl Entry {
             }
             return Ok(Entry::Local {
                 name: name.into(),
-                path: PathBuf::from(shellexpand::full(&path)?.to_string()),
+                path: PathBuf::from(shellexpand::full(&path).unwrap().to_string()),
                 setting,
             });
         }
@@ -247,7 +253,10 @@ impl Entry {
                 setting,
             });
         }
-        bail!("Path nor URL are not found: {}", name);
+        return Err(Error::InvalidEntry {
+            name: name.into(),
+            message: "Path nor URL are not found".into(),
+        });
     }
 }
 
@@ -312,7 +321,7 @@ fn official_releases() -> Result<Vec<Entry>> {
 
 pub fn load_entries() -> Result<Vec<Entry>> {
     let global_toml = config_dir()?.join(ENTRY_TOML);
-    let mut entries = load_entry_toml(&fs::read_to_string(global_toml)?)?;
+    let mut entries = load_entry_toml(&fs::read_to_string(&global_toml).with(&global_toml)?)?;
     let mut official = official_releases()?;
     entries.append(&mut official);
     Ok(entries)
@@ -325,7 +334,10 @@ pub fn load_entry(name: &str) -> Result<Entry> {
             return Ok(entry);
         }
     }
-    bail!("No entries are found: {}", name);
+    Err(Error::InvalidEntry {
+        message: "Entry not found".into(),
+        name: name.into(),
+    })
 }
 
 impl Entry {
@@ -343,9 +355,9 @@ impl Entry {
         }
     }
 
-    pub fn set_builder(&mut self, builder: &str) -> Result<()> {
-        let builder = CMakeGenerator::from_str(builder)?;
-        self.setting_mut().builder = builder;
+    pub fn set_builder(&mut self, generator: &str) -> Result<()> {
+        let generator = CMakeGenerator::from_str(generator)?;
+        self.setting_mut().generator = generator;
         Ok(())
     }
 
@@ -364,18 +376,15 @@ impl Entry {
                     }
                 }
             }
-            Entry::Local { path, .. } => {
-                if !path.is_dir() {
-                    bail!("Path '{}' is not a directory", path.display())
-                }
-            }
+            Entry::Local { .. } => {}
         }
         Ok(())
     }
 
     pub fn clean_cache_dir(&self) -> Result<()> {
-        info!("Remove cache dir: {}", self.src_dir()?.display());
-        fs::remove_dir_all(self.src_dir()?)?;
+        let path = self.src_dir()?;
+        info!("Remove cache dir: {}", path.display());
+        fs::remove_dir_all(&path).with(&path)?;
         Ok(())
     }
 
@@ -412,14 +421,15 @@ impl Entry {
         let dir = self.src_dir()?.join("build");
         if !dir.exists() {
             info!("Create build dir: {}", dir.display());
-            fs::create_dir_all(&dir)?;
+            fs::create_dir_all(&dir).with(&dir)?;
         }
         Ok(dir)
     }
 
     pub fn clean_build_dir(&self) -> Result<()> {
-        info!("Remove build dir: {}", self.build_dir()?.display());
-        fs::remove_dir_all(self.build_dir()?)?;
+        let path = self.build_dir()?;
+        info!("Remove build dir: {}", path.display());
+        fs::remove_dir_all(&path).with(&path)?;
         Ok(())
     }
 
@@ -439,7 +449,7 @@ impl Entry {
             .args(
                 &self
                     .setting()
-                    .builder
+                    .generator
                     .build_option(nproc, self.setting().build_type),
             )
             .check_run()?;
@@ -448,7 +458,7 @@ impl Entry {
 
     fn configure(&self) -> Result<()> {
         let setting = self.setting();
-        let mut opts = setting.builder.option();
+        let mut opts = setting.generator.option();
         opts.push(format!("{}", self.src_dir()?.display()));
         opts.push(format!(
             "-DCMAKE_INSTALL_PREFIX={}",
@@ -483,7 +493,7 @@ mod tests {
             path: None,
             tools: Default::default(),
             option: Default::default(),
-            builder: Default::default(),
+            generator: Default::default(),
             build_type: Default::default(),
             target: Default::default(),
         };
@@ -494,7 +504,7 @@ mod tests {
             path: Some("~/.config/llvmenv".into()),
             tools: Default::default(),
             option: Default::default(),
-            builder: Default::default(),
+            generator: Default::default(),
             build_type: Default::default(),
             target: Default::default(),
         };

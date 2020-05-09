@@ -1,13 +1,14 @@
 //! Manage LLVM/Clang builds
 
-use anyhow::format_err;
 use glob::glob;
 use log::*;
 use regex::Regex;
-use std::io::{Read, Write};
-use std::path::{Path, PathBuf};
-use std::process::Command;
-use std::{env, fs};
+use std::{
+    env, fs,
+    io::{self, Read, Write},
+    path::{Path, PathBuf},
+    process::Command,
+};
 
 use crate::config::*;
 use crate::error::*;
@@ -75,8 +76,8 @@ impl Build {
 
     pub fn set_local(&self, path: &Path) -> Result<()> {
         let env = path.join(LLVMENV_FN);
-        let mut f = fs::File::create(env)?;
-        write!(f, "{}", self.name)?;
+        let mut f = fs::File::create(&env).with(&env)?;
+        write!(f, "{}", self.name).with(env)?;
         info!("Write setting to {}", path.display());
         Ok(())
     }
@@ -104,12 +105,10 @@ impl Build {
     // InstalledDir: /usr/bin
     // ```
     pub fn version(&self) -> Result<(u32, u32, u32)> {
-        let output = Command::new(self.prefix().join("bin").join("clang"))
+        let (stdout, _) = Command::new(self.prefix().join("bin").join("clang"))
             .arg("--version")
-            .output()
-            .map_err(|_| format_err!("{}/bin/clang is not found", self.prefix().display()))?;
-        let output = ::std::str::from_utf8(&output.stdout)?;
-        parse_version(output)
+            .check_output()?;
+        parse_version(&stdout)
     }
 }
 
@@ -117,21 +116,22 @@ fn parse_version(version: &str) -> Result<(u32, u32, u32)> {
     let cap = Regex::new(r"(\d+).(\d).(\d)")
         .unwrap()
         .captures(version)
-        .ok_or(format_err!("Failed to parse $(clang --version) output"))?;
+        .ok_or(Error::invalid_version(version))?;
     let major = cap[1]
         .parse()
-        .map_err(|e| format_err!("Fail to parse major version: {:?}", e))?;
+        .map_err(|_| Error::invalid_version(version))?;
     let minor = cap[2]
         .parse()
-        .map_err(|e| format_err!("Fail to parse minor version: {:?}", e))?;
+        .map_err(|_| Error::invalid_version(version))?;
     let patch = cap[3]
         .parse()
-        .map_err(|e| format_err!("Fail to parse patch version: {:?}", e))?;
+        .map_err(|_| Error::invalid_version(version))?;
     Ok((major, minor, patch))
 }
 
 fn local_builds() -> Result<Vec<Build>> {
-    Ok(glob(&format!("{}/*/bin", data_dir()?.display()))?
+    Ok(glob(&data_dir()?.join("*/bin").to_str().unwrap())
+        .unwrap()
         .filter_map(|path| {
             if let Ok(path) = path {
                 path.parent().map(|path| Build::from_path(path))
@@ -154,9 +154,9 @@ fn load_local_env(path: &Path) -> Result<Option<Build>> {
     if !cand.exists() {
         return Ok(None);
     }
-    let mut f = fs::File::open(cand)?;
+    let mut f = fs::File::open(&cand).with(&cand)?;
     let mut s = String::new();
-    f.read_to_string(&mut s)?;
+    f.read_to_string(&mut s).with(cand)?;
     let name = s.trim();
     let mut build = Build::from_name(name)?;
     if build.exists() {
@@ -173,7 +173,7 @@ fn load_global_env() -> Result<Option<Build>> {
 
 pub fn seek_build() -> Result<Build> {
     // Seek .llvmenv from $PWD
-    let mut path = env::current_dir()?;
+    let mut path = env::current_dir().unwrap();
     loop {
         if let Some(mut build) = load_local_env(&path)? {
             build.llvmenv = Some(path.join(LLVMENV_FN));
@@ -194,7 +194,11 @@ pub fn seek_build() -> Result<Build> {
 
 pub fn expand(archive: &Path, verbose: bool) -> Result<()> {
     if !archive.exists() {
-        return Err(format_err!("Archive does not found: {}", archive.display()));
+        return Err(io::Error::new(
+            io::ErrorKind::NotFound,
+            "Archive doest not found",
+        ))
+        .with(archive);
     }
     Command::new("tar")
         .arg(if verbose { "xvf" } else { "xf" })

@@ -8,6 +8,12 @@ pub enum Error {
     #[error("IO error while accessing {path}: {source:?}")]
     FileIo { path: PathBuf, source: io::Error },
 
+    #[error(transparent)]
+    FileIoExtra {
+        #[from]
+        source: fs_extra::error::Error,
+    },
+
     #[error("Unsupported OS which cannot get (config|cache|data) directory")]
     UnsupportedOS,
 
@@ -19,6 +25,24 @@ pub enum Error {
 
     #[error("Failed to get LLVM version: {version}")]
     InvalidVersion { version: String },
+
+    #[error("Invalid URL: {url}")]
+    InvalidUrl { url: String },
+
+    #[error(transparent)]
+    InvalidTOML {
+        #[from]
+        source: toml::de::Error,
+    },
+
+    #[error("Entry {name} is invalid: {message}")]
+    InvalidEntry { name: String, message: String },
+
+    #[error(transparent)]
+    ReqwestError {
+        #[from]
+        source: reqwest::Error,
+    },
 
     #[error("External command exit with error-code({errno}): {cmd}\n[stdout]\n{stdout}\n[stderr]\n{stderr}")]
     CommandError {
@@ -55,7 +79,7 @@ impl<T> FileIoConvert<T> for ::std::result::Result<T, io::Error> {
     fn with(self, path: impl AsRef<Path>) -> Result<T> {
         self.map_err(|source| Error::FileIo {
             source,
-            path: path.into_owned(),
+            path: path.as_ref().into(),
         })
     }
 }
