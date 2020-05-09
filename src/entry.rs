@@ -227,39 +227,6 @@ pub enum Entry {
     },
 }
 
-impl Entry {
-    fn parse_setting(name: &str, setting: EntrySetting) -> Result<Self> {
-        if setting.path.is_some() && setting.url.is_some() {
-            return Err(Error::InvalidEntry {
-                name: name.into(),
-                message: "One of Path or URL are allowed".into(),
-            });
-        }
-        if let Some(path) = &setting.path {
-            if setting.tools.len() > 0 {
-                warn!("'tools' must be used with URL, ignored");
-            }
-            return Ok(Entry::Local {
-                name: name.into(),
-                path: PathBuf::from(shellexpand::full(&path).unwrap().to_string()),
-                setting,
-            });
-        }
-        if let Some(url) = &setting.url {
-            return Ok(Entry::Remote {
-                name: name.into(),
-                url: url.clone(),
-                tools: setting.tools.clone(),
-                setting,
-            });
-        }
-        return Err(Error::InvalidEntry {
-            name: name.into(),
-            message: "Path nor URL are not found".into(),
-        });
-    }
-}
-
 fn load_entry_toml(toml_str: &str) -> Result<Vec<Entry>> {
     let entries: HashMap<String, EntrySetting> = toml::from_str(toml_str)?;
     entries
@@ -373,6 +340,37 @@ pub fn load_entry(name: &str) -> Result<Entry> {
 }
 
 impl Entry {
+    fn parse_setting(name: &str, setting: EntrySetting) -> Result<Self> {
+        if setting.path.is_some() && setting.url.is_some() {
+            return Err(Error::InvalidEntry {
+                name: name.into(),
+                message: "One of Path or URL are allowed".into(),
+            });
+        }
+        if let Some(path) = &setting.path {
+            if setting.tools.len() > 0 {
+                warn!("'tools' must be used with URL, ignored");
+            }
+            return Ok(Entry::Local {
+                name: name.into(),
+                path: PathBuf::from(shellexpand::full(&path).unwrap().to_string()),
+                setting,
+            });
+        }
+        if let Some(url) = &setting.url {
+            return Ok(Entry::Remote {
+                name: name.into(),
+                url: url.clone(),
+                tools: setting.tools.clone(),
+                setting,
+            });
+        }
+        return Err(Error::InvalidEntry {
+            name: name.into(),
+            message: "Path nor URL are not found".into(),
+        });
+    }
+
     fn setting(&self) -> &EntrySetting {
         match self {
             Entry::Remote { setting, .. } => setting,
