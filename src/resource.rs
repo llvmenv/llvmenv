@@ -196,7 +196,8 @@ impl Resource {
                 for contents in fs::read_dir(&d).with(&d)? {
                     let path = contents.with(&d)?.path();
                     if path.is_dir() {
-                        let opt = fs_extra::dir::CopyOptions::new();
+                        let mut opt = fs_extra::dir::CopyOptions::new();
+                        opt.overwrite = true;
                         fs_extra::dir::copy(path, dest, &opt)?;
                     } else {
                         fs::copy(&path, dest.join(path.file_name().unwrap())).with(&d)?;
@@ -265,21 +266,6 @@ mod tests {
         let tmp_dir = TempDir::new().with("/tmp")?;
         git.download(tmp_dir.path())?;
         let cargo_toml = tmp_dir.path().join("Cargo.toml");
-        assert!(cargo_toml.exists());
-        Ok(())
-    }
-
-    #[test]
-    fn test_tar_download() -> Result<()> {
-        let tar = Resource::Tar {
-            url: "https://github.com/termoshtt/llvmenv/archive/0.1.10.tar.gz".into(),
-        };
-        let tmp_dir = cache_dir()?.join("_llvmenv_test");
-        if tmp_dir.exists() {
-            fs::remove_dir_all(&tmp_dir).with(&tmp_dir)?;
-        }
-        tar.download(&tmp_dir)?;
-        let cargo_toml = tmp_dir.join("Cargo.toml");
         assert!(cargo_toml.exists());
         Ok(())
     }
