@@ -50,22 +50,22 @@ pub enum Error {
         source: reqwest::Error,
     },
 
-    #[error("External command exit with error-code({errno}): {cmd}\n[stdout]\n{stdout}\n[stderr]\n{stderr}")]
+    #[error("External command exit with error-code({errno}): {cmd}")]
     CommandError {
         errno: i32,
         cmd: String,
-        stdout: String,
-        stderr: String,
+        stdout: Option<String>,
+        stderr: Option<String>,
     },
 
     #[error("External command not found: {cmd}")]
     CommandNotFound { cmd: String },
 
-    #[error("External command has been terminated by signal: {cmd}\n[stdout]\n{stdout}\n[stderr]\n{stderr}")]
+    #[error("External command has been terminated by signal: {cmd}")]
     CommandTerminatedBySignal {
         cmd: String,
-        stdout: String,
-        stderr: String,
+        stdout: Option<String>,
+        stderr: Option<String>,
     },
 }
 
@@ -103,8 +103,31 @@ impl CommandExt for process::Command {
     }
 
     fn check_run(&mut self) -> Result<()> {
-        let (_, _) = self.check_output()?;
-        Ok(())
+        let cmd = format!("{:?}", self);
+        let st = self
+            .status()
+            .map_err(|_| Error::CommandNotFound { cmd: cmd.clone() })?;
+        match st.code() {
+            Some(errno) => {
+                if errno != 0 {
+                    Err(Error::CommandError {
+                        errno,
+                        cmd,
+                        stdout: None,
+                        stderr: None,
+                    }
+                    .into())
+                } else {
+                    Ok(())
+                }
+            }
+            None => Err(Error::CommandTerminatedBySignal {
+                cmd,
+                stdout: None,
+                stderr: None,
+            }
+            .into()),
+        }
     }
 
     fn check_output(&mut self) -> Result<(String, String)> {
@@ -120,8 +143,8 @@ impl CommandExt for process::Command {
                     Err(Error::CommandError {
                         errno,
                         cmd,
-                        stdout,
-                        stderr,
+                        stdout: Some(stdout),
+                        stderr: Some(stderr),
                     }
                     .into())
                 } else {
@@ -130,8 +153,8 @@ impl CommandExt for process::Command {
             }
             None => Err(Error::CommandTerminatedBySignal {
                 cmd,
-                stdout,
-                stderr,
+                stdout: Some(stdout),
+                stderr: Some(stderr),
             }
             .into()),
         }
