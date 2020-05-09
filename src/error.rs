@@ -38,6 +38,12 @@ pub enum Error {
     #[error("Entry {name} is invalid: {message}")]
     InvalidEntry { name: String, message: String },
 
+    #[error("HTTP request does not succeed with {status}: {url}")]
+    HttpError {
+        url: String,
+        status: reqwest::StatusCode,
+    },
+
     #[error(transparent)]
     ReqwestError {
         #[from]

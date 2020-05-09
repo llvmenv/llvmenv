@@ -171,8 +171,16 @@ impl Resource {
                 let filename = get_filename_from_url(url)?;
                 let path = working.join(&filename);
                 let mut req = reqwest::blocking::get(url)?;
+                let status = req.status();
+                if !status.is_success() {
+                    return Err(Error::HttpError {
+                        url: url.into(),
+                        status,
+                    });
+                }
                 let mut f = fs::File::create(&path).with(path)?;
                 req.copy_to(&mut f)?;
+                drop(f);
                 Command::new("tar")
                     .arg("xf")
                     .arg(filename)
