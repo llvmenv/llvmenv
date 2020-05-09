@@ -236,86 +236,24 @@ fn load_entry_toml(toml_str: &str) -> Result<Vec<Entry>> {
 }
 
 pub fn official_releases() -> Vec<Entry> {
-    let mut github: Vec<Entry> = [(10, 0, 0), (9, 0, 1), (8, 0, 1)]
-        .iter()
-        .map(|&(major, minor, patch)| {
-            let version = format!("{}.{}.{}", major, minor, patch);
-            let mut setting = EntrySetting::default();
-            setting.url = Some(format!(
-                "https://github.com/llvm/llvm-project/releases/download/llvmorg-{version}/llvm-{version}.src.tar.xz",
-                version = version
-            ));
-            let clang = Tool {
-                name: "clang".into(),
-                url: format!(
-                    "https://github.com/llvm/llvm-project/releases/download/llvmorg-{version}/{clang}-{version}.src.tar.xz",
-                    version = version,
-                    clang = if major > 8 { "clang" } else { "cfe" }
-                ),
-                branch: None,
-                relative_path: None,
-            };
-            let lld = Tool {
-                name: "lld".into(),
-                url: format!(
-                    "https://github.com/llvm/llvm-project/releases/download/llvmorg-{version}/lld-{version}.src.tar.xz",
-                    version = version
-                ),
-                branch: None,
-                relative_path: None,
-            };
-            setting.tools = vec![clang, lld];
-            Entry::parse_setting(&version, setting).unwrap()
-        })
-        .collect();
-
-    let mut llvm_org: Vec<Entry> = [
-        (9, 0, 0),
-        (8, 0, 0),
-        (7, 1, 0),
-        (7, 0, 1),
-        (7, 0, 0),
-        (6, 0, 1),
-        (6, 0, 0),
-        (5, 0, 2),
-        (5, 0, 1),
-        (4, 0, 1),
-        (4, 0, 0),
-        (3, 9, 1),
-        (3, 9, 0),
+    vec![
+        Entry::official(10, 0, 0),
+        Entry::official(9, 0, 1),
+        Entry::official(8, 0, 1),
+        Entry::official(9, 0, 0),
+        Entry::official(8, 0, 0),
+        Entry::official(7, 1, 0),
+        Entry::official(7, 0, 1),
+        Entry::official(7, 0, 0),
+        Entry::official(6, 0, 1),
+        Entry::official(6, 0, 0),
+        Entry::official(5, 0, 2),
+        Entry::official(5, 0, 1),
+        Entry::official(4, 0, 1),
+        Entry::official(4, 0, 0),
+        Entry::official(3, 9, 1),
+        Entry::official(3, 9, 0),
     ]
-    .iter()
-    .map(|(major, minor, patch)| {
-        let version = format!("{}.{}.{}", major, minor, patch);
-        let mut setting = EntrySetting::default();
-        setting.url = Some(format!(
-            "http://releases.llvm.org/{version}/llvm-{version}.src.tar.xz",
-            version = version
-        ));
-        let clang = Tool {
-            name: "clang".into(),
-            url: format!(
-                "http://releases.llvm.org/{version}/cfe-{version}.src.tar.xz",
-                version = version
-            ),
-            branch: None,
-            relative_path: None,
-        };
-        let lld = Tool {
-            name: "lld".into(),
-            url: format!(
-                "http://releases.llvm.org/{version}/lld-{version}.src.tar.xz",
-                version = version
-            ),
-            branch: None,
-            relative_path: None,
-        };
-        setting.tools = vec![clang, lld];
-        Entry::parse_setting(&version, setting).unwrap()
-    })
-    .collect();
-    github.append(&mut llvm_org);
-    github
 }
 
 pub fn load_entries() -> Result<Vec<Entry>> {
@@ -340,6 +278,41 @@ pub fn load_entry(name: &str) -> Result<Entry> {
 }
 
 impl Entry {
+    pub fn official(major: u32, minor: u32, patch: u32) -> Self {
+        let version = format!("{}.{}.{}", major, minor, patch);
+        let mut setting = EntrySetting::default();
+
+        let base_url = if (major, minor, patch) <= (9, 0, 0) && (major, minor, patch) != (8, 0, 1) {
+            format!("http://releases.llvm.org/{}", version)
+        } else {
+            format!(
+                "https://github.com/llvm/llvm-project/releases/download/llvmorg-{}",
+                version
+            )
+        };
+        let clang_name = if (major, minor, patch) >= (9, 0, 1) {
+            "clang"
+        } else {
+            "cfe"
+        };
+
+        setting.url = Some(format!("{}/llvm-{}.src.tar.xz", base_url, version));
+        let clang = Tool {
+            name: "clang".into(),
+            url: format!("{}/{}-{}.src.tar.xz", base_url, clang_name, version),
+            branch: None,
+            relative_path: None,
+        };
+        let lld = Tool {
+            name: "lld".into(),
+            url: format!("{}/lld-{}.src.tar.xz", base_url, version),
+            branch: None,
+            relative_path: None,
+        };
+        setting.tools = vec![clang, lld];
+        Entry::parse_setting(&version, setting).unwrap()
+    }
+
     fn parse_setting(name: &str, setting: EntrySetting) -> Result<Self> {
         if setting.path.is_some() && setting.url.is_some() {
             return Err(Error::InvalidEntry {
@@ -549,31 +522,31 @@ mod tests {
     }
 
     macro_rules! checkout {
-        ($index:expr, $major:expr, $minor:expr, $patch: expr) => {
+        ($major:expr, $minor:expr, $patch: expr) => {
             paste::item! {
                 #[ignore]
                 #[test]
                 fn [< checkout_ $major _ $minor _ $patch >]() {
-                    official_releases()[$index].checkout().unwrap();
+                    Entry::official($major, $minor, $patch).checkout().unwrap();
                 }
             }
         };
     }
 
-    checkout!(0, 10, 0, 0);
-    checkout!(1, 9, 0, 1);
-    checkout!(2, 8, 0, 1);
-    checkout!(3, 9, 0, 0);
-    checkout!(4, 8, 0, 0);
-    checkout!(5, 7, 1, 0);
-    checkout!(6, 7, 0, 1);
-    checkout!(7, 7, 0, 0);
-    checkout!(8, 6, 0, 1);
-    checkout!(9, 6, 0, 0);
-    checkout!(10, 5, 0, 2);
-    checkout!(11, 5, 0, 1);
-    checkout!(12, 4, 0, 1);
-    checkout!(13, 4, 0, 0);
-    checkout!(14, 3, 9, 1);
-    checkout!(15, 3, 9, 0);
+    checkout!(10, 0, 0);
+    checkout!(9, 0, 1);
+    checkout!(8, 0, 1);
+    checkout!(9, 0, 0);
+    checkout!(8, 0, 0);
+    checkout!(7, 1, 0);
+    checkout!(7, 0, 1);
+    checkout!(7, 0, 0);
+    checkout!(6, 0, 1);
+    checkout!(6, 0, 0);
+    checkout!(5, 0, 2);
+    checkout!(5, 0, 1);
+    checkout!(4, 0, 1);
+    checkout!(4, 0, 0);
+    checkout!(3, 9, 1);
+    checkout!(3, 9, 0);
 }
