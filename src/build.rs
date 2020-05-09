@@ -13,7 +13,7 @@ use std::{
 use crate::config::*;
 use crate::error::*;
 
-const LLVMENV_FN: &'static str = ".llvmenv";
+const LLVMENV_FN: &str = ".llvmenv";
 
 #[derive(Debug)]
 pub struct Build {

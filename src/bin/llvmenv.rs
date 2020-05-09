@@ -133,7 +133,7 @@ fn main() -> error::Result<()> {
             nproc,
         } => {
             let mut entry = entry::load_entry(&name)?;
-            let nproc = nproc.unwrap_or(num_cpus::get());
+            let nproc = nproc.unwrap_or_else(num_cpus::get);
             if let Some(builder) = builder {
                 entry.set_builder(&builder)?;
             }
@@ -192,7 +192,7 @@ fn main() -> error::Result<()> {
                 if patch {
                     print!("{}", pa);
                 }
-                println!("");
+                println!();
             }
         }
 
@@ -202,7 +202,7 @@ fn main() -> error::Result<()> {
         }
         LLVMEnv::Local { name, path } => {
             let build = get_existing_build(&name);
-            let path = path.unwrap_or(env::current_dir().unwrap());
+            let path = path.unwrap_or_else(|| env::current_dir().unwrap());
             build.set_local(&path)?;
         }
 

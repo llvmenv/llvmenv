@@ -68,10 +68,7 @@
 use itertools::*;
 use log::{info, warn};
 use serde_derive::Deserialize;
-use std::collections::HashMap;
-use std::path::PathBuf;
-use std::{fs, process};
-use toml;
+use std::{collections::HashMap, fs, path::PathBuf, process};
 
 use crate::config::*;
 use crate::error::*;
@@ -338,10 +335,10 @@ impl Entry {
                 setting,
             });
         }
-        return Err(Error::InvalidEntry {
+        Err(Error::InvalidEntry {
             name: name.into(),
             message: "Path nor URL are not found".into(),
-        });
+        })
     }
 
     fn setting(&self) -> &EntrySetting {
