@@ -31,3 +31,6 @@ structopt = "0.3"
 tempfile= "3"
 toml = "0.5"
 url = "2"
+
+[dev-dependencies]
+paste = "0.1"

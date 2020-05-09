@@ -522,10 +522,31 @@ mod tests {
         let _entry = Entry::parse_setting("duplicated", setting).unwrap();
     }
 
-    #[test]
-    fn checkout_official_releases() {
-        for entry in official_releases() {
-            entry.checkout().unwrap()
-        }
+    macro_rules! checkout {
+        ($index:expr, $major:expr, $minor:expr, $patch: expr) => {
+            paste::item! {
+                #[test]
+                fn [< checkout_ $major _ $minor _ $patch >]() {
+                    official_releases()[$index].checkout().unwrap();
+                }
+            }
+        };
     }
+
+    checkout!(0, 10, 0, 0);
+    checkout!(1, 9, 0, 1);
+    checkout!(2, 9, 0, 0);
+    checkout!(3, 8, 0, 1);
+    checkout!(4, 8, 0, 0);
+    checkout!(5, 7, 1, 0);
+    checkout!(6, 7, 0, 1);
+    checkout!(7, 7, 0, 0);
+    checkout!(8, 6, 0, 1);
+    checkout!(9, 6, 0, 0);
+    checkout!(10, 5, 0, 2);
+    checkout!(11, 5, 0, 1);
+    checkout!(12, 4, 0, 1);
+    checkout!(13, 4, 0, 0);
+    checkout!(14, 3, 9, 1);
+    checkout!(15, 3, 9, 0);
 }
