@@ -227,7 +227,92 @@ pub enum Entry {
     },
 }
 
+fn load_entry_toml(toml_str: &str) -> Result<Vec<Entry>> {
+    let entries: HashMap<String, EntrySetting> = toml::from_str(toml_str)?;
+    entries
+        .into_iter()
+        .map(|(name, setting)| Entry::parse_setting(&name, setting))
+        .collect()
+}
+
+pub fn official_releases() -> Vec<Entry> {
+    vec![
+        Entry::official(10, 0, 0),
+        Entry::official(9, 0, 1),
+        Entry::official(8, 0, 1),
+        Entry::official(9, 0, 0),
+        Entry::official(8, 0, 0),
+        Entry::official(7, 1, 0),
+        Entry::official(7, 0, 1),
+        Entry::official(7, 0, 0),
+        Entry::official(6, 0, 1),
+        Entry::official(6, 0, 0),
+        Entry::official(5, 0, 2),
+        Entry::official(5, 0, 1),
+        Entry::official(4, 0, 1),
+        Entry::official(4, 0, 0),
+        Entry::official(3, 9, 1),
+        Entry::official(3, 9, 0),
+    ]
+}
+
+pub fn load_entries() -> Result<Vec<Entry>> {
+    let global_toml = config_dir()?.join(ENTRY_TOML);
+    let mut entries = load_entry_toml(&fs::read_to_string(&global_toml).with(&global_toml)?)?;
+    let mut official = official_releases();
+    entries.append(&mut official);
+    Ok(entries)
+}
+
+pub fn load_entry(name: &str) -> Result<Entry> {
+    let entries = load_entries()?;
+    for entry in entries {
+        if entry.name() == name {
+            return Ok(entry);
+        }
+    }
+    Err(Error::InvalidEntry {
+        message: "Entry not found".into(),
+        name: name.into(),
+    })
+}
+
 impl Entry {
+    pub fn official(major: u32, minor: u32, patch: u32) -> Self {
+        let version = format!("{}.{}.{}", major, minor, patch);
+        let mut setting = EntrySetting::default();
+
+        let base_url = if (major, minor, patch) <= (9, 0, 0) && (major, minor, patch) != (8, 0, 1) {
+            format!("http://releases.llvm.org/{}", version)
+        } else {
+            format!(
+                "https://github.com/llvm/llvm-project/releases/download/llvmorg-{}",
+                version
+            )
+        };
+        let clang_name = if (major, minor, patch) >= (9, 0, 1) {
+            "clang"
+        } else {
+            "cfe"
+        };
+
+        setting.url = Some(format!("{}/llvm-{}.src.tar.xz", base_url, version));
+        let clang = Tool {
+            name: "clang".into(),
+            url: format!("{}/{}-{}.src.tar.xz", base_url, clang_name, version),
+            branch: None,
+            relative_path: None,
+        };
+        let lld = Tool {
+            name: "lld".into(),
+            url: format!("{}/lld-{}.src.tar.xz", base_url, version),
+            branch: None,
+            relative_path: None,
+        };
+        setting.tools = vec![clang, lld];
+        Entry::parse_setting(&version, setting).unwrap()
+    }
+
     fn parse_setting(name: &str, setting: EntrySetting) -> Result<Self> {
         if setting.path.is_some() && setting.url.is_some() {
             return Err(Error::InvalidEntry {
@@ -258,89 +343,7 @@ impl Entry {
             message: "Path nor URL are not found".into(),
         });
     }
-}
 
-fn load_entry_toml(toml_str: &str) -> Result<Vec<Entry>> {
-    let entries: HashMap<String, EntrySetting> = toml::from_str(toml_str)?;
-    entries
-        .into_iter()
-        .map(|(name, setting)| Entry::parse_setting(&name, setting))
-        .collect()
-}
-
-fn official_releases() -> Result<Vec<Entry>> {
-    [
-        (10, 0, 0),
-        (9, 0, 1),
-        (9, 0, 0),
-        (8, 0, 1),
-        (8, 0, 0),
-        (7, 1, 0),
-        (7, 0, 1),
-        (7, 0, 0),
-        (6, 0, 1),
-        (6, 0, 0),
-        (5, 0, 2),
-        (5, 0, 1),
-        (4, 0, 1),
-        (4, 0, 0),
-        (3, 9, 1),
-        (3, 9, 0),
-    ]
-    .iter()
-    .map(|(major, minor, patch)| {
-        let version = format!("{}.{}.{}", major, minor, patch);
-        let mut setting = EntrySetting::default();
-        setting.url = Some(format!(
-            "http://releases.llvm.org/{version}/llvm-{version}.src.tar.xz",
-            version = version
-        ));
-        let clang = Tool {
-            name: "clang".into(),
-            url: format!(
-                "http://releases.llvm.org/{version}/cfe-{version}.src.tar.xz",
-                version = version
-            ),
-            branch: None,
-            relative_path: None,
-        };
-        let lld = Tool {
-            name: "lld".into(),
-            url: format!(
-                "http://releases.llvm.org/{version}/lld-{version}.src.tar.xz",
-                version = version
-            ),
-            branch: None,
-            relative_path: None,
-        };
-        setting.tools = vec![clang, lld];
-        Entry::parse_setting(&version, setting)
-    })
-    .collect()
-}
-
-pub fn load_entries() -> Result<Vec<Entry>> {
-    let global_toml = config_dir()?.join(ENTRY_TOML);
-    let mut entries = load_entry_toml(&fs::read_to_string(&global_toml).with(&global_toml)?)?;
-    let mut official = official_releases()?;
-    entries.append(&mut official);
-    Ok(entries)
-}
-
-pub fn load_entry(name: &str) -> Result<Entry> {
-    let entries = load_entries()?;
-    for entry in entries {
-        if entry.name() == name {
-            return Ok(entry);
-        }
-    }
-    Err(Error::InvalidEntry {
-        message: "Entry not found".into(),
-        name: name.into(),
-    })
-}
-
-impl Entry {
     fn setting(&self) -> &EntrySetting {
         match self {
             Entry::Remote { setting, .. } => setting,
@@ -364,16 +367,12 @@ impl Entry {
     pub fn checkout(&self) -> Result<()> {
         match self {
             Entry::Remote { url, tools, .. } => {
-                if !self.src_dir()?.is_dir() {
-                    let src = Resource::from_url(url)?;
-                    src.download(&self.src_dir()?)?;
-                }
+                let src = Resource::from_url(url)?;
+                src.download(&self.src_dir()?)?;
                 for tool in tools {
                     let path = self.src_dir()?.join(tool.rel_path());
-                    if !path.is_dir() {
-                        let src = Resource::from_url(&tool.url)?;
-                        src.download(&path)?;
-                    }
+                    let src = Resource::from_url(&tool.url)?;
+                    src.download(&path)?;
                 }
             }
             Entry::Local { .. } => {}
@@ -487,29 +486,67 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_setting() -> Result<()> {
+    fn parse_url() {
         let setting = EntrySetting {
-            url: None,
-            path: None,
-            tools: Default::default(),
-            option: Default::default(),
-            generator: Default::default(),
-            build_type: Default::default(),
-            target: Default::default(),
+            url: Some("http://llvm.org/svn/llvm-project/llvm/trunk".into()),
+            ..Default::default()
         };
-        assert!(Entry::parse_setting("no_entry", setting).is_err());
+        let _entry = Entry::parse_setting("url", setting).unwrap();
+    }
 
+    #[test]
+    fn parse_path() {
+        let setting = EntrySetting {
+            path: Some("~/.config/llvmenv".into()),
+            ..Default::default()
+        };
+        let _entry = Entry::parse_setting("path", setting).unwrap();
+    }
+
+    #[should_panic]
+    #[test]
+    fn parse_no_entry() {
+        let setting = EntrySetting::default();
+        let _entry = Entry::parse_setting("no_entry", setting).unwrap();
+    }
+
+    #[should_panic]
+    #[test]
+    fn parse_duplicated() {
         let setting = EntrySetting {
             url: Some("http://llvm.org/svn/llvm-project/llvm/trunk".into()),
             path: Some("~/.config/llvmenv".into()),
-            tools: Default::default(),
-            option: Default::default(),
-            generator: Default::default(),
-            build_type: Default::default(),
-            target: Default::default(),
+            ..Default::default()
         };
-        assert!(Entry::parse_setting("duplicated", setting).is_err());
-
-        Ok(())
+        let _entry = Entry::parse_setting("duplicated", setting).unwrap();
     }
+
+    macro_rules! checkout {
+        ($major:expr, $minor:expr, $patch: expr) => {
+            paste::item! {
+                #[ignore]
+                #[test]
+                fn [< checkout_ $major _ $minor _ $patch >]() {
+                    Entry::official($major, $minor, $patch).checkout().unwrap();
+                }
+            }
+        };
+    }
+
+    checkout!(10, 0, 0);
+    checkout!(9, 0, 1);
+    checkout!(8, 0, 1);
+    checkout!(9, 0, 0);
+    checkout!(8, 0, 0);
+    checkout!(7, 1, 0);
+    checkout!(7, 0, 1);
+    checkout!(7, 0, 0);
+    checkout!(6, 0, 1);
+    checkout!(6, 0, 0);
+    checkout!(5, 0, 2);
+    checkout!(5, 0, 1);
+    checkout!(4, 0, 1);
+    checkout!(4, 0, 0);
+    checkout!(3, 9, 1);
+    checkout!(3, 9, 0);
 }
