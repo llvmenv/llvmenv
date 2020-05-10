@@ -6,7 +6,6 @@ use std::{fs, io, path::*, process::Command};
 use tempfile::TempDir;
 use url::Url;
 
-use crate::config::*;
 use crate::error::*;
 
 /// Remote LLVM/Clang resource
@@ -167,11 +166,7 @@ impl Resource {
             }
             Resource::Tar { url } => {
                 info!("Download Tar file: {}", url);
-                let working = cache_dir()?.join(".tar_download");
-                fs::create_dir_all(&working).with(&working)?;
-                let filename = get_filename_from_url(url)?;
-                let path = working.join(&filename);
-                let mut req = reqwest::blocking::get(url)?;
+                let req = reqwest::blocking::get(url)?;
                 let status = req.status();
                 if !status.is_success() {
                     return Err(Error::HttpError {
@@ -179,30 +174,22 @@ impl Resource {
                         status,
                     });
                 }
-                let mut f = fs::File::create(&path).with(path)?;
-                req.copy_to(&mut f)?;
-                drop(f);
-                Command::new("tar")
-                    .arg("xf")
-                    .arg(filename)
-                    .current_dir(&working)
-                    .check_run()?;
-                let d = fs::read_dir(&working)
-                    .with(working)?
-                    .map(|d| d.unwrap())
-                    .filter(|d| d.file_type().unwrap().is_dir())
-                    .nth(0)
-                    .expect("Archive does not contains file")
-                    .path();
-                for contents in fs::read_dir(&d).with(&d)? {
-                    let path = contents.with(&d)?.path();
-                    if path.is_dir() {
-                        let mut opt = fs_extra::dir::CopyOptions::new();
-                        opt.overwrite = true;
-                        fs_extra::dir::copy(path, dest, &opt)?;
-                    } else {
-                        fs::copy(&path, dest.join(path.file_name().unwrap())).with(&d)?;
+                // This will be large, but at most ~100MB
+                let bytes = req.bytes()?;
+                let xz_buf = xz2::read::XzDecoder::new(bytes.as_ref());
+                let mut tar_buf = tar::Archive::new(xz_buf);
+                let entries = tar_buf
+                    .entries()
+                    .expect("Tar archive does not contains entry");
+
+                for entry in entries {
+                    let mut entry = entry.expect("Invalid entry");
+                    let path = entry.path().expect("Filename is not a valid unicode");
+                    let mut target = dest.to_owned();
+                    for comp in path.components().skip(1) {
+                        target = target.join(comp);
                     }
+                    entry.unpack(target).unwrap();
                 }
             }
         }

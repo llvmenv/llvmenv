@@ -31,6 +31,8 @@ tempfile= "3"
 thiserror = "1.0"
 toml = "0.5"
 url = "2"
+xz2 = "*"
+tar = "*"
 
 [dev-dependencies]
 paste = "0.1"
