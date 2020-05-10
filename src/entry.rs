@@ -456,20 +456,36 @@ impl Entry {
         let setting = self.setting();
         let mut opts = setting.generator.option();
         opts.push(format!("{}", self.src_dir()?.display()));
+
         opts.push(format!(
             "-DCMAKE_INSTALL_PREFIX={}",
             data_dir()?.join(self.prefix()?).display()
         ));
         opts.push(format!("-DCMAKE_BUILD_TYPE={:?}", setting.build_type));
+
+        // Enable ccache if exists
+        if which::which("ccache").is_ok() {
+            opts.push("-DLLVM_CCACHE_BUILD=ON".into());
+        }
+
+        // Enable lld if exists
+        if which::which("lld").is_ok() {
+            opts.push("-DLLVM_ENABLE_LLD=ON".into());
+        }
+
+        // Target architectures
         if setting.target.len() > 0 {
             opts.push(format!(
                 "-DLLVM_TARGETS_TO_BUILD={}",
                 setting.target.iter().join(";")
             ));
         }
+
+        // Other options
         for (k, v) in &setting.option {
             opts.push(format!("-D{}={}", k, v));
         }
+
         process::Command::new("cmake")
             .args(&opts)
             .current_dir(self.build_dir()?)

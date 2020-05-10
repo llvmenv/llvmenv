@@ -27,12 +27,13 @@ serde_derive = "1"
 shellexpand = "2"
 simplelog = "0.7"
 structopt = "0.3"
+tar = "*"
 tempfile= "3"
 thiserror = "1.0"
 toml = "0.5"
 url = "2"
+which = { version = "3", default-features = false }
 xz2 = "*"
-tar = "*"
 
 [dev-dependencies]
 paste = "0.1"
