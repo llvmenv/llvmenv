@@ -108,7 +108,7 @@ fn parse_version(version: &str) -> Result<(u32, u32, u32)> {
     let cap = Regex::new(r"(\d+).(\d).(\d)")
         .unwrap()
         .captures(version)
-        .ok_or(Error::invalid_version(version))?;
+        .ok_or_else(|| Error::invalid_version(version))?;
     let major = cap[1]
         .parse()
         .map_err(|_| Error::invalid_version(version))?;

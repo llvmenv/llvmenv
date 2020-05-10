@@ -68,15 +68,23 @@
 use itertools::*;
 use log::{info, warn};
 use serde_derive::Deserialize;
-use std::{collections::HashMap, fs, path::PathBuf, process};
+use std::{collections::HashMap, fs, path::PathBuf, process, str::FromStr};
 
-use crate::config::*;
-use crate::error::*;
-use crate::resource::Resource;
+use crate::{config::*, error::*, resource::*};
 
 /// Option for CMake Generators
 ///
 /// - Official document: [CMake Generators](https://cmake.org/cmake/help/latest/manual/cmake-generators.7.html)
+///
+/// ```
+/// use llvmenv::entry::CMakeGenerator;
+/// use std::str::FromStr;
+/// assert_eq!(CMakeGenerator::from_str("Makefile").unwrap(), CMakeGenerator::Makefile);
+/// assert_eq!(CMakeGenerator::from_str("Ninja").unwrap(), CMakeGenerator::Ninja);
+/// assert_eq!(CMakeGenerator::from_str("vs").unwrap(), CMakeGenerator::VisualStudio);
+/// assert_eq!(CMakeGenerator::from_str("VisualStudio").unwrap(), CMakeGenerator::VisualStudio);
+/// assert!(CMakeGenerator::from_str("MySuperBuilder").is_err());
+/// ```
 #[derive(Deserialize, PartialEq, Debug)]
 pub enum CMakeGenerator {
     /// Use platform default generator (without -G option)
@@ -91,16 +99,15 @@ pub enum CMakeGenerator {
     VisualStudioWin64,
 }
 
-impl CMakeGenerator {
-    /// ```
-    /// # use llvmenv::entry::CMakeGenerator;
-    /// assert_eq!(CMakeGenerator::from_str("Makefile").unwrap(), CMakeGenerator::Makefile);
-    /// assert_eq!(CMakeGenerator::from_str("Ninja").unwrap(), CMakeGenerator::Ninja);
-    /// assert_eq!(CMakeGenerator::from_str("vs").unwrap(), CMakeGenerator::VisualStudio);
-    /// assert_eq!(CMakeGenerator::from_str("VisualStudio").unwrap(), CMakeGenerator::VisualStudio);
-    /// assert!(CMakeGenerator::from_str("Unknown").is_err());
-    /// ```
-    pub fn from_str(generator: &str) -> Result<Self> {
+impl Default for CMakeGenerator {
+    fn default() -> Self {
+        CMakeGenerator::Platform
+    }
+}
+
+impl FromStr for CMakeGenerator {
+    type Err = Error;
+    fn from_str(generator: &str) -> Result<Self> {
         Ok(match generator.to_ascii_lowercase().as_str() {
             "makefile" => CMakeGenerator::Makefile,
             "ninja" => CMakeGenerator::Ninja,
@@ -112,8 +119,11 @@ impl CMakeGenerator {
             }
         })
     }
+}
 
-    fn option(&self) -> Vec<String> {
+impl CMakeGenerator {
+    /// Option for cmake
+    pub fn option(&self) -> Vec<String> {
         match self {
             CMakeGenerator::Platform => Vec::new(),
             CMakeGenerator::Makefile => vec!["-G", "Unix Makefiles"],
@@ -128,7 +138,8 @@ impl CMakeGenerator {
         .collect()
     }
 
-    fn build_option(&self, nproc: usize, build_type: BuildType) -> Vec<String> {
+    /// Option for cmake build mode (`cmake --build` command)
+    pub fn build_option(&self, nproc: usize, build_type: BuildType) -> Vec<String> {
         match self {
             CMakeGenerator::VisualStudioWin64 | CMakeGenerator::VisualStudio => {
                 vec!["--config".into(), format!("{:?}", build_type)]
@@ -138,12 +149,6 @@ impl CMakeGenerator {
                 vec!["--".into(), "-j".into(), format!("{}", nproc)]
             }
         }
-    }
-}
-
-impl Default for CMakeGenerator {
-    fn default() -> Self {
-        CMakeGenerator::Platform
     }
 }
 
@@ -165,10 +170,13 @@ impl Default for BuildType {
 pub struct Tool {
     /// Name of tool (will be downloaded into `tools/{name}` by default)
     pub name: String,
+
     /// URL for tool. Git/SVN repository or Tar archive are allowed.
     pub url: String,
+
     /// Git branch (not for SVN)
     pub branch: Option<String>,
+
     /// Relative install Path (see the example of clang-extra in [module level doc](index.html))
     pub relative_path: Option<String>,
 }
@@ -183,27 +191,35 @@ impl Tool {
 }
 
 /// Setting for both Remote and Local entries. TOML setting file will be decoded into this struct.
+///
+///
 #[derive(Deserialize, Debug, Default)]
 pub struct EntrySetting {
     /// URL of remote LLVM resource, see also [resouce](../resource/index.html) module
     pub url: Option<String>,
+
     /// Path of local LLVM source dir
     pub path: Option<String>,
+
     /// Additional LLVM Tools, e.g. clang, openmp, lld, and so on.
     #[serde(default)]
     pub tools: Vec<Tool>,
-    /// Target to be build. Empty means all backend
+
+    /// Target to be build, e.g. "X86". Empty means all backend
     #[serde(default)]
     pub target: Vec<String>,
-    /// Additional LLVM build options
-    #[serde(default)]
-    pub option: HashMap<String, String>,
+
     /// CMake Generator option (-G option in cmake)
     #[serde(default)]
     pub generator: CMakeGenerator,
+
     ///  Option for `CMAKE_BUILD_TYPE`
     #[serde(default)]
     pub build_type: BuildType,
+
+    /// Additional LLVM build options
+    #[serde(default)]
+    pub option: HashMap<String, String>,
 }
 
 /// Describes how to compile LLVM/Clang
@@ -275,6 +291,7 @@ pub fn load_entry(name: &str) -> Result<Entry> {
 }
 
 impl Entry {
+    /// Entry for official LLVM release
     pub fn official(major: u32, minor: u32, patch: u32) -> Self {
         let version = format!("{}.{}.{}", major, minor, patch);
         let mut setting = EntrySetting::default();
@@ -318,7 +335,7 @@ impl Entry {
             });
         }
         if let Some(path) = &setting.path {
-            if setting.tools.len() > 0 {
+            if !setting.tools.is_empty() {
                 warn!("'tools' must be used with URL, ignored");
             }
             return Ok(Entry::Local {
@@ -474,7 +491,7 @@ impl Entry {
         }
 
         // Target architectures
-        if setting.target.len() > 0 {
+        if !setting.target.is_empty() {
             opts.push(format!(
                 "-DLLVM_TARGETS_TO_BUILD={}",
                 setting.target.iter().join(";")
