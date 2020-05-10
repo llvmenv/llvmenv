@@ -95,17 +95,9 @@ impl Build {
         Ok(())
     }
 
-    // Use clang --version command
-    //
-    // ```
-    // $ clang --version
-    // clang version 7.0.0 (tags/RELEASE_700/final)  # parse this line
-    // Target: x86_64-pc-linux-gnu
-    // Thread model: posix
-    // InstalledDir: /usr/bin
-    // ```
+    /// Use `llvm-config --version` command
     pub fn version(&self) -> Result<(u32, u32, u32)> {
-        let (stdout, _) = Command::new(self.prefix().join("bin").join("clang"))
+        let (stdout, _) = Command::new(self.prefix().join("bin/llvm-config"))
             .arg("--version")
             .check_output()?;
         parse_version(&stdout)
