@@ -189,7 +189,12 @@ impl Resource {
                     for comp in path.components().skip(1) {
                         target = target.join(comp);
                     }
-                    entry.unpack(target).unwrap();
+                    if let Err(e) = entry.unpack(target) {
+                        match e.kind() {
+                            io::ErrorKind::AlreadyExists => debug!("{:?}", e),
+                            _ => warn!("{:?}", e),
+                        }
+                    }
                 }
             }
         }
