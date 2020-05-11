@@ -1,7 +1,6 @@
 //! Get remote LLVM/Clang source
 
 use log::*;
-use reqwest;
 use std::{fs, io, path::*, process::Command};
 use tempfile::TempDir;
 use url::Url;
@@ -22,19 +21,28 @@ pub enum Resource {
 impl Resource {
     /// Detect remote resorce from URL
     ///
+    /// - Official subversion repository
+    ///
     /// ```
     /// # use llvmenv::resource::Resource;
-    /// // Official SVN repository
     /// let llvm_official_url = "http://llvm.org/svn/llvm-project/llvm/trunk";
     /// let svn = Resource::from_url(llvm_official_url).unwrap();
     /// assert_eq!(svn, Resource::Svn { url: llvm_official_url.into() });
+    /// ```
     ///
-    /// // GitHub mirror
-    /// let github_mirror = "https://github.com/llvm-mirror/llvm";
+    /// - GitHub
+    ///
+    /// ```
+    /// # use llvmenv::resource::Resource;
+    /// let github_mirror = "https://github.com/llvm/llvm-project";
     /// let git = Resource::from_url(github_mirror).unwrap();
     /// assert_eq!(git, Resource::Git { url: github_mirror.into(), branch: None });
+    /// ```
     ///
-    /// // Tar release
+    /// - Tar Archive
+    ///
+    /// ```
+    /// # use llvmenv::resource::Resource;
     /// let tar_url = "http://releases.llvm.org/6.0.1/llvm-6.0.1.src.tar.xz";
     /// let tar = Resource::from_url(tar_url).unwrap();
     /// assert_eq!(tar, Resource::Tar { url: tar_url.into() });

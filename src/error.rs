@@ -115,8 +115,7 @@ impl CommandExt for process::Command {
                         cmd,
                         stdout: None,
                         stderr: None,
-                    }
-                    .into())
+                    })
                 } else {
                     Ok(())
                 }
@@ -125,8 +124,7 @@ impl CommandExt for process::Command {
                 cmd,
                 stdout: None,
                 stderr: None,
-            }
-            .into()),
+            }),
         }
     }
 
@@ -145,8 +143,7 @@ impl CommandExt for process::Command {
                         cmd,
                         stdout: Some(stdout),
                         stderr: Some(stderr),
-                    }
-                    .into())
+                    })
                 } else {
                     Ok((stdout, stderr))
                 }
@@ -155,8 +152,7 @@ impl CommandExt for process::Command {
                 cmd,
                 stdout: Some(stdout),
                 stderr: Some(stderr),
-            }
-            .into()),
+            }),
         }
     }
 }
