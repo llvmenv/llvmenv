@@ -182,10 +182,29 @@ pub struct Tool {
 }
 
 impl Tool {
+    fn new(name: &str, url: &str) -> Self {
+        Tool {
+            name: name.into(),
+            url: url.into(),
+            branch: None,
+            relative_path: None,
+        }
+    }
+
     fn rel_path(&self) -> String {
         match self.relative_path {
             Some(ref rel_path) => rel_path.to_string(),
-            None => format!("tools/{}", self.name),
+            None => match self.name.as_str() {
+                "clang" | "lld" | "lldb" | "polly" => format!("tools/{}", self.name),
+                "clang-tools-extra" => "tools/clang/tools/clang-tools-extra".into(),
+                "compiler-rt" | "libcxx" | "libcxxabi" | "libunwind" | "openmp" => {
+                    format!("projects/{}", self.name)
+                }
+                _ => panic!(
+                    "Unknown tool. Please specify its relative path explicitly: {}",
+                    self.name
+                ),
+            },
         }
     }
 }
@@ -304,26 +323,57 @@ impl Entry {
                 version
             )
         };
-        let clang_name = if (major, minor, patch) >= (9, 0, 1) {
-            "clang"
-        } else {
-            "cfe"
-        };
 
         setting.url = Some(format!("{}/llvm-{}.src.tar.xz", base_url, version));
-        let clang = Tool {
-            name: "clang".into(),
-            url: format!("{}/{}-{}.src.tar.xz", base_url, clang_name, version),
-            branch: None,
-            relative_path: None,
-        };
-        let lld = Tool {
-            name: "lld".into(),
-            url: format!("{}/lld-{}.src.tar.xz", base_url, version),
-            branch: None,
-            relative_path: None,
-        };
-        setting.tools = vec![clang, lld];
+        setting.tools.push(Tool::new(
+            "clang",
+            &format!(
+                "{}/{}-{}.src.tar.xz",
+                base_url,
+                if (major, minor, patch) >= (9, 0, 1) {
+                    "clang"
+                } else {
+                    "cfe"
+                },
+                version
+            ),
+        ));
+        setting.tools.push(Tool::new(
+            "lld",
+            &format!("{}/lld-{}.src.tar.xz", base_url, version),
+        ));
+        setting.tools.push(Tool::new(
+            "lldb",
+            &format!("{}/lldb-{}.src.tar.xz", base_url, version),
+        ));
+        setting.tools.push(Tool::new(
+            "clang-tools-extra",
+            &format!("{}/clang-tools-extra-{}.src.tar.xz", base_url, version),
+        ));
+        setting.tools.push(Tool::new(
+            "polly",
+            &format!("{}/polly-{}.src.tar.xz", base_url, version),
+        ));
+        setting.tools.push(Tool::new(
+            "compiler-rt",
+            &format!("{}/compiler-rt-{}.src.tar.xz", base_url, version),
+        ));
+        setting.tools.push(Tool::new(
+            "libcxx",
+            &format!("{}/libcxx-{}.src.tar.xz", base_url, version),
+        ));
+        setting.tools.push(Tool::new(
+            "libcxxabi",
+            &format!("{}/libcxxabi-{}.src.tar.xz", base_url, version),
+        ));
+        setting.tools.push(Tool::new(
+            "libunwind",
+            &format!("{}/libunwind-{}.src.tar.xz", base_url, version),
+        ));
+        setting.tools.push(Tool::new(
+            "openmp",
+            &format!("{}/openmp-{}.src.tar.xz", base_url, version),
+        ));
         Entry::parse_setting(&version, setting).unwrap()
     }
 
