@@ -25,7 +25,7 @@ reqwest = { version = "0.10.4", features = ["blocking"] }
 serde = "1.0.110"
 serde_derive = "1.0.110"
 shellexpand = "2.0.0"
-simplelog = "0.7.6"
+simplelog = "0.8.0"
 structopt = "0.3.14"
 tar = "0.4.26"
 tempfile= "3.1.0"
