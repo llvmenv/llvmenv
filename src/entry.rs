@@ -189,6 +189,8 @@ pub struct EntrySetting {
     pub url: Option<String>,
     /// The relative path to the LLVM source, used if the URL used points to a root project in which the LLVM source is contained.
     pub relative_path: Option<PathBuf>,
+    /// Branch to clone if a git URL is used
+    pub branch: Option<String>,
     /// Path of local LLVM source dir
     pub path: Option<String>,
     /// Additional LLVM Tools, e.g. clang, openmp, lld, and so on.
@@ -218,6 +220,7 @@ pub enum Entry {
         url: String,
         tools: Vec<Tool>,
         relative_path: Option<PathBuf>,
+        branch: Option<String>,
         setting: EntrySetting,
     },
     Local {
@@ -247,6 +250,7 @@ impl Entry {
                 name: name.into(),
                 url: url.clone(),
                 relative_path: setting.relative_path.clone(),
+                branch: setting.branch.clone(),
                 tools: setting.tools.clone(),
                 setting,
             });
@@ -349,15 +353,17 @@ impl Entry {
 
     pub fn checkout(&self) -> Result<()> {
         match self {
-            Entry::Remote { url, tools, .. } => {
+            Entry::Remote {
+                url, tools, branch, ..
+            } => {
                 if !self.src_dir()?.is_dir() {
-                    let src = Resource::from_url(url)?;
+                    let src = Resource::from_url(url, branch)?;
                     src.download(&self.root_src_dir()?)?;
                 }
                 for tool in tools {
                     let path = self.src_dir()?.join(tool.rel_path());
                     if !path.is_dir() {
-                        let src = Resource::from_url(&tool.url)?;
+                        let src = Resource::from_url(&tool.url, &tool.branch)?;
                         src.download(&path)?;
                     }
                 }
@@ -379,11 +385,13 @@ impl Entry {
 
     pub fn update(&self) -> Result<()> {
         match self {
-            Entry::Remote { url, tools, .. } => {
-                let src = Resource::from_url(url)?;
+            Entry::Remote {
+                url, tools, branch, ..
+            } => {
+                let src = Resource::from_url(url, branch)?;
                 src.update(&self.src_dir()?)?;
                 for tool in tools {
-                    let src = Resource::from_url(&tool.url)?;
+                    let src = Resource::from_url(&tool.url, &tool.branch)?;
                     src.update(&self.src_dir()?.join(tool.rel_path()))?;
                 }
             }
@@ -503,6 +511,7 @@ mod tests {
             builder: Default::default(),
             build_type: Default::default(),
             relative_path: None,
+            branch: None,
             target: Default::default(),
         };
         assert!(Entry::parse_setting("no_entry", setting).is_err());
@@ -515,6 +524,7 @@ mod tests {
             builder: Default::default(),
             build_type: Default::default(),
             relative_path: None,
+            branch: None,
             target: Default::default(),
         };
         assert!(Entry::parse_setting("duplicated", setting).is_err());

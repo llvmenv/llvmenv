@@ -116,15 +116,16 @@ fn main() -> error::Result<()> {
             }
         }
 
-        LLVMEnv::Entries {} => {
-            if let Ok(entries) = entry::load_entries() {
+        LLVMEnv::Entries {} => match entry::load_entries() {
+            Ok(entries) => {
                 for entry in &entries {
                     println!("{}", entry.name());
                 }
-            } else {
-                bail!("No entries. Please define entries in $XDG_CONFIG_HOME/llvmenv/entry.toml");
             }
-        }
+            Err(e) => {
+                bail!("{}", e);
+            }
+        },
         LLVMEnv::BuildEntry {
             name,
             update,
@@ -139,16 +140,26 @@ fn main() -> error::Result<()> {
                 entry.set_builder(&builder)?;
             }
             if discard {
-                entry.clean_cache_dir().unwrap();
+                if let Err(e) = entry.clean_cache_dir() {
+                    println!("{}", e);
+                }
             }
-            entry.checkout().unwrap();
+            if let Err(e) = entry.checkout() {
+                println!("{}", e);
+            };
             if update {
-                entry.update().unwrap();
+                if let Err(e) = entry.update() {
+                    println!("{}", e);
+                };
             }
             if clean {
-                entry.clean_build_dir().unwrap();
+                if let Err(e) = entry.clean_build_dir() {
+                    println!("{}", e);
+                };
             }
-            entry.build(nproc).unwrap();
+            if let Err(e) = entry.build(nproc) {
+                println!("{}", e);
+            };
         }
 
         LLVMEnv::Current { verbose } => {

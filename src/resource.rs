@@ -30,20 +30,20 @@ impl Resource {
     /// # use llvmenv::resource::Resource;
     /// // Official SVN repository
     /// let llvm_official_url = "http://llvm.org/svn/llvm-project/llvm/trunk";
-    /// let svn = Resource::from_url(llvm_official_url).unwrap();
+    /// let svn = Resource::from_url(llvm_official_url, &None).unwrap();
     /// assert_eq!(svn, Resource::Svn { url: llvm_official_url.into() });
     ///
     /// // GitHub mirror
     /// let github_mirror = "https://github.com/llvm-mirror/llvm";
-    /// let git = Resource::from_url(github_mirror).unwrap();
+    /// let git = Resource::from_url(github_mirror, &None).unwrap();
     /// assert_eq!(git, Resource::Git { url: github_mirror.into(), branch: None });
     ///
     /// // Tar release
     /// let tar_url = "http://releases.llvm.org/6.0.1/llvm-6.0.1.src.tar.xz";
-    /// let tar = Resource::from_url(tar_url).unwrap();
+    /// let tar = Resource::from_url(tar_url, &None).unwrap();
     /// assert_eq!(tar, Resource::Tar { url: tar_url.into() });
     /// ```
-    pub fn from_url(url_str: &str) -> Result<Self> {
+    pub fn from_url(url_str: &str, branch: &Option<String>) -> Result<Self> {
         // Check file extension
         if let Ok(filename) = get_filename_from_url(url_str) {
             for ext in &[".tar.gz", ".tar.xz", ".tar.bz2", ".tar.Z", ".tgz", ".taz"] {
@@ -66,7 +66,10 @@ impl Resource {
                 info!("Find '.git' extension");
                 return Ok(Resource::Git {
                     url: strip_branch_from_url(url_str)?,
-                    branch: get_branch_from_url(url_str)?,
+                    branch: branch.as_ref().map_or_else(
+                        || get_branch_from_url(url_str).unwrap_or(None),
+                        |s| Some(s.clone()),
+                    ),
                 });
             }
         }
@@ -78,7 +81,10 @@ impl Resource {
                 info!("URL is a cloud git service: {}", service);
                 return Ok(Resource::Git {
                     url: strip_branch_from_url(url_str)?,
-                    branch: get_branch_from_url(url_str)?,
+                    branch: branch.as_ref().map_or_else(
+                        || get_branch_from_url(url_str).unwrap_or(None),
+                        |s| Some(s.clone()),
+                    ),
                 });
             }
         }
@@ -94,7 +100,10 @@ impl Resource {
                 info!("URL is LLVM Git repository");
                 return Ok(Resource::Git {
                     url: strip_branch_from_url(url_str)?,
-                    branch: get_branch_from_url(url_str)?,
+                    branch: branch.as_ref().map_or_else(
+                        || get_branch_from_url(url_str).unwrap_or(None),
+                        |s| Some(s.clone()),
+                    ),
                 });
             }
         }
@@ -132,7 +141,9 @@ impl Resource {
                 info!("Git access succeeds");
                 Ok(Resource::Git {
                     url: strip_branch_from_url(url_str)?,
-                    branch: get_branch_from_url(url_str)?,
+                    branch: branch
+                        .clone()
+                        .or_else(|| get_branch_from_url(url_str).unwrap().or_else(|| None)),
                 })
             }
             Err(_) => {
@@ -277,7 +288,7 @@ mod tests {
     #[test]
     fn test_with_git_branches() {
         let github_mirror = "https://github.com/llvm-mirror/llvm";
-        let git = Resource::from_url(github_mirror).unwrap();
+        let git = Resource::from_url(github_mirror, &None).unwrap();
         assert_eq!(
             git,
             Resource::Git {
@@ -286,7 +297,7 @@ mod tests {
             }
         );
         assert_eq!(
-            Resource::from_url("https://github.com/llvm-mirror/llvm#release_80").unwrap(),
+            Resource::from_url("https://github.com/llvm-mirror/llvm#release_80", &None).unwrap(),
             Resource::Git {
                 url: "https://github.com/llvm-mirror/llvm".into(),
                 branch: Some("release_80".into())
