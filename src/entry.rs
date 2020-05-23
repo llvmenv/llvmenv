@@ -160,34 +160,13 @@ impl Default for BuildType {
     }
 }
 
-/// LLVM Tools e.g. clang, compiler-rt, and so on.
-#[derive(Deserialize, Debug, Clone)]
-pub struct Tool {
-    /// Name of tool (will be downloaded into `tools/{name}` by default)
-    pub name: String,
-    /// URL for tool. Git/SVN repository or Tar archive are allowed.
-    pub url: String,
-    /// Git branch (not for SVN)
-    pub branch: Option<String>,
-    /// Relative install Path (see the example of clang-extra in [module level doc](index.html))
-    pub relative_path: Option<String>,
-}
-
-impl Tool {
-    fn rel_path(&self) -> String {
-        match self.relative_path {
-            Some(ref rel_path) => rel_path.to_string(),
-            None => format!("tools/{}", self.name),
-        }
-    }
-}
-
 /// Setting for both Remote and Local entries. TOML setting file will be decoded into this struct.
 #[derive(Deserialize, Debug, Default)]
 pub struct EntrySetting {
     /// URL of remote LLVM resource, see also [resouce](../resource/index.html) module
     pub url: Option<String>,
     /// The relative path to the LLVM source, used if the URL used points to a root project in which the LLVM source is contained.
+    /// Note: This is here for feeble future-proofing. The LLVM project mono-repo uses the 'llvm' subdirectory CMake config for buiilding all other projects
     pub relative_path: Option<PathBuf>,
     /// Branch to clone if a git URL is used
     pub branch: Option<String>,
@@ -195,7 +174,7 @@ pub struct EntrySetting {
     pub path: Option<String>,
     /// Additional LLVM Tools, e.g. clang, openmp, lld, and so on.
     #[serde(default)]
-    pub tools: Vec<Tool>,
+    pub tools: Vec<String>,
     /// Target to be build. Empty means all backend
     #[serde(default)]
     pub target: Vec<String>,
@@ -218,7 +197,7 @@ pub enum Entry {
     Remote {
         name: String,
         url: String,
-        tools: Vec<Tool>,
+        tools: Vec<String>,
         relative_path: Option<PathBuf>,
         branch: Option<String>,
         setting: EntrySetting,
@@ -288,25 +267,7 @@ fn official_releases() -> Result<Vec<Entry>> {
             "http://releases.llvm.org/{version}/llvm-{version}.src.tar.xz",
             version = version
         ));
-        let clang = Tool {
-            name: "clang".into(),
-            url: format!(
-                "http://releases.llvm.org/{version}/cfe-{version}.src.tar.xz",
-                version = version
-            ),
-            branch: None,
-            relative_path: None,
-        };
-        let lld = Tool {
-            name: "lld".into(),
-            url: format!(
-                "http://releases.llvm.org/{version}/lld-{version}.src.tar.xz",
-                version = version
-            ),
-            branch: None,
-            relative_path: None,
-        };
-        setting.tools = vec![clang, lld];
+        setting.tools = vec!["clang".into(), "lld".into()];
         Entry::parse_setting(&version, setting)
     })
     .collect()
@@ -353,19 +314,10 @@ impl Entry {
 
     pub fn checkout(&self) -> Result<()> {
         match self {
-            Entry::Remote {
-                url, tools, branch, ..
-            } => {
+            Entry::Remote { url, branch, .. } => {
                 if !self.src_dir()?.is_dir() {
                     let src = Resource::from_url(url, branch)?;
                     src.download(&self.root_src_dir()?)?;
-                }
-                for tool in tools {
-                    let path = self.src_dir()?.join(tool.rel_path());
-                    if !path.is_dir() {
-                        let src = Resource::from_url(&tool.url, &tool.branch)?;
-                        src.download(&path)?;
-                    }
                 }
             }
             Entry::Local { path, .. } => {
@@ -385,15 +337,9 @@ impl Entry {
 
     pub fn update(&self) -> Result<()> {
         match self {
-            Entry::Remote {
-                url, tools, branch, ..
-            } => {
+            Entry::Remote { url, branch, .. } => {
                 let src = Resource::from_url(url, branch)?;
                 src.update(&self.src_dir()?)?;
-                for tool in tools {
-                    let src = Resource::from_url(&tool.url, &tool.branch)?;
-                    src.update(&self.src_dir()?.join(tool.rel_path()))?;
-                }
             }
             Entry::Local { .. } => {}
         }
@@ -417,17 +363,7 @@ impl Entry {
 
     pub fn src_dir(&self) -> Result<PathBuf> {
         Ok(match self {
-            Entry::Remote {
-                name,
-                relative_path,
-                ..
-            } => {
-                if let Some(relative_path) = relative_path {
-                    cache_dir()?.join(name).join(relative_path)
-                } else {
-                    cache_dir()?.join(name)
-                }
-            }
+            Entry::Remote { name, .. } => cache_dir()?.join(name),
 
             Entry::Local { path, .. } => path.into(),
         })
@@ -474,7 +410,11 @@ impl Entry {
     fn configure(&self) -> Result<()> {
         let setting = self.setting();
         let mut opts = setting.builder.option();
-        opts.push(format!("{}", self.src_dir()?.display()));
+        if let Some(ref relative_path) = setting.relative_path {
+            opts.push(format!("../{}", relative_path.display()));
+        } else {
+            opts.push("../llvm".into());
+        }
         opts.push(format!(
             "-DCMAKE_INSTALL_PREFIX={}",
             data_dir()?.join(self.prefix()?).display()
@@ -486,6 +426,10 @@ impl Entry {
                 setting.target.iter().join(";")
             ));
         }
+        opts.push(format!(
+            "-DLLVM_ENABLE_PROJECTS={}",
+            setting.tools.join(";")
+        ));
         for (k, v) in &setting.option {
             opts.push(format!("-D{}={}", k, v));
         }
