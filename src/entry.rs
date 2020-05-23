@@ -264,7 +264,7 @@ fn official_releases() -> Result<Vec<Entry>> {
         let version = format!("{}.{}.{}", major, minor, patch);
         let mut setting = EntrySetting::default();
         setting.url = Some(format!(
-            "http://releases.llvm.org/{version}/llvm-{version}.src.tar.xz",
+            "https://github.com/llvm/llvm-project/archive/llvmorg-{version}.tar.gz",
             version = version
         ));
         setting.tools = vec!["clang".into(), "lld".into()];
