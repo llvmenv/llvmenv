@@ -1,18 +1,19 @@
 //! Manage LLVM/Clang builds
 
-use failure::{err_msg, format_err};
 use glob::glob;
 use log::*;
 use regex::Regex;
-use std::io::{Read, Write};
-use std::path::{Path, PathBuf};
-use std::process::Command;
-use std::{env, fs};
+use std::{
+    env, fs,
+    io::{self, Read, Write},
+    path::{Path, PathBuf},
+    process::Command,
+};
 
 use crate::config::*;
 use crate::error::*;
 
-const LLVMENV_FN: &'static str = ".llvmenv";
+const LLVMENV_FN: &str = ".llvmenv";
 
 #[derive(Debug)]
 pub struct Build {
@@ -75,8 +76,8 @@ impl Build {
 
     pub fn set_local(&self, path: &Path) -> Result<()> {
         let env = path.join(LLVMENV_FN);
-        let mut f = fs::File::create(env)?;
-        write!(f, "{}", self.name)?;
+        let mut f = fs::File::create(&env).with(&env)?;
+        write!(f, "{}", self.name).with(env)?;
         info!("Write setting to {}", path.display());
         Ok(())
     }
@@ -94,49 +95,35 @@ impl Build {
         Ok(())
     }
 
-    // Use clang --version command
-    //
-    // ```
-    // $ clang --version
-    // clang version 7.0.0 (tags/RELEASE_700/final)  # parse this line
-    // Target: x86_64-pc-linux-gnu
-    // Thread model: posix
-    // InstalledDir: /usr/bin
-    // ```
+    /// Use `llvm-config --version` command
     pub fn version(&self) -> Result<(u32, u32, u32)> {
-        let output = Command::new(self.prefix().join("bin").join("clang"))
+        let (stdout, _) = Command::new(self.prefix().join("bin/llvm-config"))
             .arg("--version")
-            .output()
-            .map_err(|_| {
-                err_msg(format!(
-                    "{}/bin/clang is not found",
-                    self.prefix().display()
-                ))
-            })?;
-        let output = ::std::str::from_utf8(&output.stdout)?;
-        parse_version(output)
+            .check_output()?;
+        parse_version(&stdout)
     }
 }
 
 fn parse_version(version: &str) -> Result<(u32, u32, u32)> {
-    let cap = Regex::new(r"(\d).(\d).(\d)")
+    let cap = Regex::new(r"(\d+).(\d).(\d)")
         .unwrap()
         .captures(version)
-        .ok_or(err_msg("Failed to parse $(clang --version) output"))?;
+        .ok_or_else(|| Error::invalid_version(version))?;
     let major = cap[1]
         .parse()
-        .map_err(|e| format_err!("Fail to parse major version: {:?}", e))?;
+        .map_err(|_| Error::invalid_version(version))?;
     let minor = cap[2]
         .parse()
-        .map_err(|e| format_err!("Fail to parse minor version: {:?}", e))?;
+        .map_err(|_| Error::invalid_version(version))?;
     let patch = cap[3]
         .parse()
-        .map_err(|e| format_err!("Fail to parse patch version: {:?}", e))?;
+        .map_err(|_| Error::invalid_version(version))?;
     Ok((major, minor, patch))
 }
 
 fn local_builds() -> Result<Vec<Build>> {
-    Ok(glob(&format!("{}/*/bin", data_dir()?.display()))?
+    Ok(glob(&data_dir()?.join("*/bin").to_str().unwrap())
+        .unwrap()
         .filter_map(|path| {
             if let Ok(path) = path {
                 path.parent().map(|path| Build::from_path(path))
@@ -159,9 +146,9 @@ fn load_local_env(path: &Path) -> Result<Option<Build>> {
     if !cand.exists() {
         return Ok(None);
     }
-    let mut f = fs::File::open(cand)?;
+    let mut f = fs::File::open(&cand).with(&cand)?;
     let mut s = String::new();
-    f.read_to_string(&mut s)?;
+    f.read_to_string(&mut s).with(cand)?;
     let name = s.trim();
     let mut build = Build::from_name(name)?;
     if build.exists() {
@@ -178,7 +165,7 @@ fn load_global_env() -> Result<Option<Build>> {
 
 pub fn seek_build() -> Result<Build> {
     // Seek .llvmenv from $PWD
-    let mut path = env::current_dir()?;
+    let mut path = env::current_dir().unwrap();
     loop {
         if let Some(mut build) = load_local_env(&path)? {
             build.llvmenv = Some(path.join(LLVMENV_FN));
@@ -199,10 +186,11 @@ pub fn seek_build() -> Result<Build> {
 
 pub fn expand(archive: &Path, verbose: bool) -> Result<()> {
     if !archive.exists() {
-        return Err(err_msg(format!(
-            "Archive does not found: {}",
-            archive.display()
-        )));
+        return Err(io::Error::new(
+            io::ErrorKind::NotFound,
+            "Archive doest not found",
+        ))
+        .with(archive);
     }
     Command::new("tar")
         .arg(if verbose { "xvf" } else { "xf" })
@@ -225,6 +213,12 @@ mod tests {
         assert_eq!(major, 6);
         assert_eq!(minor, 0);
         assert_eq!(patch, 1);
+        let version = "clang version 10.0.0 \
+            (https://github.com/llvm-mirror/clang 65acf43270ea2894dffa0d0b292b92402f80c8cb)";
+        let (major, minor, patch) = parse_version(version)?;
+        assert_eq!(major, 10);
+        assert_eq!(minor, 0);
+        assert_eq!(patch, 0);
         Ok(())
     }
 }

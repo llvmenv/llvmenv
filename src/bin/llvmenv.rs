@@ -1,17 +1,19 @@
 use llvmenv::error::CommandExt;
 use llvmenv::*;
 
-use failure::bail;
-use std::env;
-use std::path::PathBuf;
-use std::process::{exit, Command};
+use simplelog::*;
+use std::{
+    env,
+    path::PathBuf,
+    process::{exit, Command},
+};
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
 #[structopt(
     name = "llvmenv",
     about = "Manage multiple LLVM/Clang builds",
-    raw(setting = "structopt::clap::AppSettings::ColoredHelp")
+    setting = structopt::clap::AppSettings::ColoredHelp
 )]
 enum LLVMEnv {
     #[structopt(name = "init", about = "Initialize llvmenv")]
@@ -98,7 +100,13 @@ enum LLVMEnv {
 }
 
 fn main() -> error::Result<()> {
-    env_logger::init();
+    TermLogger::init(
+        LevelFilter::Info,
+        ConfigBuilder::new().set_time_to_local(true).build(),
+        TerminalMode::Mixed,
+    )
+    .unwrap();
+
     let opt = LLVMEnv::from_args();
     match opt {
         LLVMEnv::Init {} => config::init_config()?,
@@ -123,7 +131,7 @@ fn main() -> error::Result<()> {
                 }
             }
             Err(e) => {
-                bail!("{}", e);
+                panic!("{}", e);
             }
         },
         LLVMEnv::BuildEntry {
@@ -135,7 +143,7 @@ fn main() -> error::Result<()> {
             nproc,
         } => {
             let mut entry = entry::load_entry(&name)?;
-            let nproc = nproc.unwrap_or(num_cpus::get());
+            let nproc = nproc.unwrap_or_else(num_cpus::get);
             if let Some(builder) = builder {
                 entry.set_builder(&builder)?;
             }
@@ -204,7 +212,7 @@ fn main() -> error::Result<()> {
                 if patch {
                     print!("{}", pa);
                 }
-                println!("");
+                println!();
             }
         }
 
@@ -214,7 +222,7 @@ fn main() -> error::Result<()> {
         }
         LLVMEnv::Local { name, path } => {
             let build = get_existing_build(&name);
-            let path = path.unwrap_or(env::current_dir()?);
+            let path = path.unwrap_or_else(|| env::current_dir().unwrap());
             build.set_local(&path)?;
         }
 
