@@ -8,7 +8,7 @@ use crate::error::*;
 pub const APP_NAME: &str = "llvmenv";
 pub const ENTRY_TOML: &str = "entry.toml";
 
-const LLVM_MIRROR: &str = include_str!("llvm-mirror.toml");
+const LLVM_PROJECT: &str = include_str!("llvm-project.toml");
 
 pub fn config_dir() -> Result<PathBuf> {
     let path = dirs::config_dir()
@@ -45,7 +45,7 @@ pub fn init_config() -> Result<()> {
     if !entry.exists() {
         info!("Create default entry setting: {}", entry.display());
         let mut f = fs::File::create(&entry).with(&entry)?;
-        f.write(LLVM_MIRROR.as_bytes()).with(&entry)?;
+        f.write(LLVM_PROJECT.as_bytes()).with(&entry)?;
         Ok(())
     } else {
         Err(Error::ConfigureAlreadyExists { path: entry })

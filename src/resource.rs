@@ -32,12 +32,12 @@ impl Resource {
     ///
     /// - GitHub
     ///
-    /// // GitHub mirror
+    /// // GitHub repo
     /// ```
     /// # use llvmenv::resource::Resource;
-    /// let github_mirror = "https://github.com/llvm-mirror/llvm";
-    /// let git = Resource::from_url(github_mirror, &None).unwrap();
-    /// assert_eq!(git, Resource::Git { url: github_mirror.into(), branch: None });
+    /// let github_repo = "https://github.com/llvm/llvm-project";
+    /// let git = Resource::from_url(github_repo, &None).unwrap();
+    /// assert_eq!(git, Resource::Git { url: github_repo.into(), branch: None });
     /// ```
     ///
     /// - Tar Archive

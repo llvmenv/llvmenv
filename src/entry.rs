@@ -6,25 +6,15 @@
 //! `llvmenv init` generates default setting:
 //!
 //! ```toml
-//! [llvm-mirror]
-//! url    = "https://github.com/llvm-mirror/llvm"
+//! [llvm-project]
+//! url    = "https://github.com/llvm/llvm-project"
 //! target = ["X86"]
-//!
-//! [[llvm-mirror.tools]]
-//! name = "clang"
-//! url = "https://github.com/llvm-mirror/clang"
-//!
-//! [[llvm-mirror.tools]]
-//! name = "clang-extra"
-//! url = "https://github.com/llvm-mirror/clang-tools-extra"
-//! relative_path = "tools/clang/tools/extra"
+//! tools = ["clang", "clang-tools-extra"]
 //! ```
 //!
 //! (TOML format has been changed largely at version 0.2.0)
 //!
 //! **tools** property means LLVM tools, e.g. clang, compiler-rt, lld, and so on.
-//! These will be downloaded into `${llvm-top}/tools/${tool-name}` by default,
-//! and `relative_path` property change it.
 //! This toml will be decoded into [EntrySetting][EntrySetting] and normalized into [Entry][Entry].
 //!
 //! [Entry]: ./enum.Entry.html
@@ -50,7 +40,14 @@
 //!
 //! ```shell
 //! $ llvmenv entries
-//! llvm-mirror
+//! llvm-project
+//! 10.0.0
+//! 9.0.1
+//! 8.0.1
+//! 9.0.0
+//! 8.0.0
+//! 7.1.0
+//! 7.0.1
 //! 7.0.0
 //! 6.0.1
 //! 6.0.0
