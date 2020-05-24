@@ -26,17 +26,18 @@ impl Resource {
     /// ```
     /// # use llvmenv::resource::Resource;
     /// let llvm_official_url = "http://llvm.org/svn/llvm-project/llvm/trunk";
-    /// let svn = Resource::from_url(llvm_official_url).unwrap();
+    /// let svn = Resource::from_url(llvm_official_url, &None).unwrap();
     /// assert_eq!(svn, Resource::Svn { url: llvm_official_url.into() });
     /// ```
     ///
     /// - GitHub
     ///
+    /// // GitHub repo
     /// ```
     /// # use llvmenv::resource::Resource;
-    /// let github_mirror = "https://github.com/llvm/llvm-project";
-    /// let git = Resource::from_url(github_mirror).unwrap();
-    /// assert_eq!(git, Resource::Git { url: github_mirror.into(), branch: None });
+    /// let github_repo = "https://github.com/llvm/llvm-project";
+    /// let git = Resource::from_url(github_repo, &None).unwrap();
+    /// assert_eq!(git, Resource::Git { url: github_repo.into(), branch: None });
     /// ```
     ///
     /// - Tar Archive
@@ -44,10 +45,10 @@ impl Resource {
     /// ```
     /// # use llvmenv::resource::Resource;
     /// let tar_url = "http://releases.llvm.org/6.0.1/llvm-6.0.1.src.tar.xz";
-    /// let tar = Resource::from_url(tar_url).unwrap();
+    /// let tar = Resource::from_url(tar_url, &None).unwrap();
     /// assert_eq!(tar, Resource::Tar { url: tar_url.into() });
     /// ```
-    pub fn from_url(url_str: &str) -> Result<Self> {
+    pub fn from_url(url_str: &str, branch: &Option<String>) -> Result<Self> {
         // Check file extension
         if let Ok(filename) = get_filename_from_url(url_str) {
             for ext in &[".tar.gz", ".tar.xz", ".tar.bz2", ".tar.Z", ".tgz", ".taz"] {
@@ -70,7 +71,10 @@ impl Resource {
                 debug!("Find '.git' extension");
                 return Ok(Resource::Git {
                     url: strip_branch_from_url(url_str)?,
-                    branch: get_branch_from_url(url_str)?,
+                    branch: branch.as_ref().map_or_else(
+                        || get_branch_from_url(url_str).unwrap_or(None),
+                        |s| Some(s.clone()),
+                    ),
                 });
             }
         }
@@ -84,7 +88,10 @@ impl Resource {
                 debug!("URL is a cloud git service: {}", service);
                 return Ok(Resource::Git {
                     url: strip_branch_from_url(url_str)?,
-                    branch: get_branch_from_url(url_str)?,
+                    branch: branch.as_ref().map_or_else(
+                        || get_branch_from_url(url_str).unwrap_or(None),
+                        |s| Some(s.clone()),
+                    ),
                 });
             }
         }
@@ -100,7 +107,10 @@ impl Resource {
                 debug!("URL is LLVM Git repository");
                 return Ok(Resource::Git {
                     url: strip_branch_from_url(url_str)?,
-                    branch: get_branch_from_url(url_str)?,
+                    branch: branch.as_ref().map_or_else(
+                        || get_branch_from_url(url_str).unwrap_or(None),
+                        |s| Some(s.clone()),
+                    ),
                 });
             }
         }
@@ -138,7 +148,9 @@ impl Resource {
                 debug!("Git access succeeds");
                 Ok(Resource::Git {
                     url: strip_branch_from_url(url_str)?,
-                    branch: get_branch_from_url(url_str)?,
+                    branch: branch
+                        .clone()
+                        .or_else(|| get_branch_from_url(url_str).unwrap().or_else(|| None)),
                 })
             }
             Err(_) => {
@@ -184,15 +196,15 @@ impl Resource {
                 }
                 // This will be large, but at most ~100MB
                 let bytes = req.bytes()?;
-                let xz_buf = xz2::read::XzDecoder::new(bytes.as_ref());
-                let mut tar_buf = tar::Archive::new(xz_buf);
+                let gz_decoder = flate2::bufread::GzDecoder::new(bytes.as_ref());
+                let mut tar_buf = tar::Archive::new(gz_decoder);
                 let entries = tar_buf
                     .entries()
-                    .expect("Tar archive does not contains entry");
-
+                    .expect("Tar archive does not contain an entry");
+                // Iterate through archive contents in order to omit base path component when extracting
                 for entry in entries {
                     let mut entry = entry.expect("Invalid entry");
-                    let path = entry.path().expect("Filename is not a valid unicode");
+                    let path = entry.path().expect("Filename is not valid unicode");
                     let mut target = dest.to_owned();
                     for comp in path.components().skip(1) {
                         target = target.join(comp);
@@ -280,7 +292,7 @@ mod tests {
     #[test]
     fn test_with_git_branches() {
         let github_mirror = "https://github.com/llvm-mirror/llvm";
-        let git = Resource::from_url(github_mirror).unwrap();
+        let git = Resource::from_url(github_mirror, &None).unwrap();
         assert_eq!(
             git,
             Resource::Git {
@@ -289,7 +301,7 @@ mod tests {
             }
         );
         assert_eq!(
-            Resource::from_url("https://github.com/llvm-mirror/llvm#release_80").unwrap(),
+            Resource::from_url("https://github.com/llvm-mirror/llvm#release_80", &None).unwrap(),
             Resource::Git {
                 url: "https://github.com/llvm-mirror/llvm".into(),
                 branch: Some("release_80".into())

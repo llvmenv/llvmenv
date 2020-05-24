@@ -6,25 +6,15 @@
 //! `llvmenv init` generates default setting:
 //!
 //! ```toml
-//! [llvm-mirror]
-//! url    = "https://github.com/llvm-mirror/llvm"
+//! [llvm-project]
+//! url    = "https://github.com/llvm/llvm-project"
 //! target = ["X86"]
-//!
-//! [[llvm-mirror.tools]]
-//! name = "clang"
-//! url = "https://github.com/llvm-mirror/clang"
-//!
-//! [[llvm-mirror.tools]]
-//! name = "clang-extra"
-//! url = "https://github.com/llvm-mirror/clang-tools-extra"
-//! relative_path = "tools/clang/tools/extra"
+//! tools = ["clang", "clang-tools-extra"]
 //! ```
 //!
 //! (TOML format has been changed largely at version 0.2.0)
 //!
 //! **tools** property means LLVM tools, e.g. clang, compiler-rt, lld, and so on.
-//! These will be downloaded into `${llvm-top}/tools/${tool-name}` by default,
-//! and `relative_path` property change it.
 //! This toml will be decoded into [EntrySetting][EntrySetting] and normalized into [Entry][Entry].
 //!
 //! [Entry]: ./enum.Entry.html
@@ -50,7 +40,14 @@
 //!
 //! ```shell
 //! $ llvmenv entries
-//! llvm-mirror
+//! llvm-project
+//! 10.0.0
+//! 9.0.1
+//! 8.0.1
+//! 9.0.0
+//! 8.0.0
+//! 7.1.0
+//! 7.0.1
 //! 7.0.0
 //! 6.0.1
 //! 6.0.0
@@ -165,50 +162,6 @@ impl Default for BuildType {
     }
 }
 
-/// LLVM Tools e.g. clang, compiler-rt, and so on.
-#[derive(Deserialize, Debug, Clone)]
-pub struct Tool {
-    /// Name of tool (will be downloaded into `tools/{name}` by default)
-    pub name: String,
-
-    /// URL for tool. Git/SVN repository or Tar archive are allowed.
-    pub url: String,
-
-    /// Git branch (not for SVN)
-    pub branch: Option<String>,
-
-    /// Relative install Path (see the example of clang-extra in [module level doc](index.html))
-    pub relative_path: Option<String>,
-}
-
-impl Tool {
-    fn new(name: &str, url: &str) -> Self {
-        Tool {
-            name: name.into(),
-            url: url.into(),
-            branch: None,
-            relative_path: None,
-        }
-    }
-
-    fn rel_path(&self) -> String {
-        match self.relative_path {
-            Some(ref rel_path) => rel_path.to_string(),
-            None => match self.name.as_str() {
-                "clang" | "lld" | "lldb" | "polly" => format!("tools/{}", self.name),
-                "clang-tools-extra" => "tools/clang/tools/clang-tools-extra".into(),
-                "compiler-rt" | "libcxx" | "libcxxabi" | "libunwind" | "openmp" => {
-                    format!("projects/{}", self.name)
-                }
-                _ => panic!(
-                    "Unknown tool. Please specify its relative path explicitly: {}",
-                    self.name
-                ),
-            },
-        }
-    }
-}
-
 /// Setting for both Remote and Local entries. TOML setting file will be decoded into this struct.
 ///
 ///
@@ -216,15 +169,18 @@ impl Tool {
 pub struct EntrySetting {
     /// URL of remote LLVM resource, see also [resouce](../resource/index.html) module
     pub url: Option<String>,
-
+    /// The relative path to the LLVM source, used if the URL used points to a root project in which the LLVM source is contained.
+    /// Note: This is here for feeble future-proofing. The LLVM project mono-repo uses the 'llvm' subdirectory CMake config for buiilding all other projects
+    pub relative_path: Option<PathBuf>,
+    /// Branch to clone if a git URL is used
+    pub branch: Option<String>,
     /// Path of local LLVM source dir
     pub path: Option<String>,
 
     /// Additional LLVM Tools, e.g. clang, openmp, lld, and so on.
     #[serde(default)]
-    pub tools: Vec<Tool>,
-
-    /// Target to be build, e.g. "X86". Empty means all backend
+    pub tools: Vec<String>,
+    /// Target to be build. Empty means all backend
     #[serde(default)]
     pub target: Vec<String>,
 
@@ -249,7 +205,9 @@ pub enum Entry {
     Remote {
         name: String,
         url: String,
-        tools: Vec<Tool>,
+        tools: Vec<String>,
+        relative_path: Option<PathBuf>,
+        branch: Option<String>,
         setting: EntrySetting,
     },
     Local {
@@ -315,65 +273,22 @@ impl Entry {
         let version = format!("{}.{}.{}", major, minor, patch);
         let mut setting = EntrySetting::default();
 
-        let base_url = if (major, minor, patch) <= (9, 0, 0) && (major, minor, patch) != (8, 0, 1) {
-            format!("http://releases.llvm.org/{}", version)
-        } else {
-            format!(
-                "https://github.com/llvm/llvm-project/releases/download/llvmorg-{}",
-                version
-            )
-        };
-
-        setting.url = Some(format!("{}/llvm-{}.src.tar.xz", base_url, version));
-        setting.tools.push(Tool::new(
-            "clang",
-            &format!(
-                "{}/{}-{}.src.tar.xz",
-                base_url,
-                if (major, minor, patch) >= (9, 0, 1) {
-                    "clang"
-                } else {
-                    "cfe"
-                },
-                version
-            ),
+        setting.url = Some(format!(
+            "https://github.com/llvm/llvm-project/archive/llvmorg-{version}.tar.gz",
+            version = version
         ));
-        setting.tools.push(Tool::new(
-            "lld",
-            &format!("{}/lld-{}.src.tar.xz", base_url, version),
-        ));
-        setting.tools.push(Tool::new(
-            "lldb",
-            &format!("{}/lldb-{}.src.tar.xz", base_url, version),
-        ));
-        setting.tools.push(Tool::new(
-            "clang-tools-extra",
-            &format!("{}/clang-tools-extra-{}.src.tar.xz", base_url, version),
-        ));
-        setting.tools.push(Tool::new(
-            "polly",
-            &format!("{}/polly-{}.src.tar.xz", base_url, version),
-        ));
-        setting.tools.push(Tool::new(
-            "compiler-rt",
-            &format!("{}/compiler-rt-{}.src.tar.xz", base_url, version),
-        ));
-        setting.tools.push(Tool::new(
-            "libcxx",
-            &format!("{}/libcxx-{}.src.tar.xz", base_url, version),
-        ));
-        setting.tools.push(Tool::new(
-            "libcxxabi",
-            &format!("{}/libcxxabi-{}.src.tar.xz", base_url, version),
-        ));
-        setting.tools.push(Tool::new(
-            "libunwind",
-            &format!("{}/libunwind-{}.src.tar.xz", base_url, version),
-        ));
-        setting.tools.push(Tool::new(
-            "openmp",
-            &format!("{}/openmp-{}.src.tar.xz", base_url, version),
-        ));
+        setting.tools = vec![
+            "clang".into(),
+            "ldd".into(),
+            "lldb".into(),
+            "clang-tools-extra".into(),
+            "polly".into(),
+            "compiler-rt".into(),
+            "libcxx".into(),
+            "libcxxabi".into(),
+            "libunwind".into(),
+            "openmp".into(),
+        ];
         Entry::parse_setting(&version, setting).unwrap()
     }
 
@@ -399,6 +314,8 @@ impl Entry {
                 name: name.into(),
                 url: url.clone(),
                 tools: setting.tools.clone(),
+                relative_path: None,
+                branch: None,
                 setting,
             });
         }
@@ -430,14 +347,9 @@ impl Entry {
 
     pub fn checkout(&self) -> Result<()> {
         match self {
-            Entry::Remote { url, tools, .. } => {
-                let src = Resource::from_url(url)?;
+            Entry::Remote { url, branch, .. } => {
+                let src = Resource::from_url(url, branch)?;
                 src.download(&self.src_dir()?)?;
-                for tool in tools {
-                    let path = self.src_dir()?.join(tool.rel_path());
-                    let src = Resource::from_url(&tool.url)?;
-                    src.download(&path)?;
-                }
             }
             Entry::Local { .. } => {}
         }
@@ -453,13 +365,9 @@ impl Entry {
 
     pub fn update(&self) -> Result<()> {
         match self {
-            Entry::Remote { url, tools, .. } => {
-                let src = Resource::from_url(url)?;
+            Entry::Remote { url, branch, .. } => {
+                let src = Resource::from_url(url, branch)?;
                 src.update(&self.src_dir()?)?;
-                for tool in tools {
-                    let src = Resource::from_url(&tool.url)?;
-                    src.update(&self.src_dir()?.join(tool.rel_path()))?;
-                }
             }
             Entry::Local { .. } => {}
         }
@@ -473,9 +381,18 @@ impl Entry {
         }
     }
 
+    pub fn root_src_dir(&self) -> Result<PathBuf> {
+        Ok(match self {
+            Entry::Remote { name, .. } => cache_dir()?.join(name),
+
+            Entry::Local { path, .. } => path.into(),
+        })
+    }
+
     pub fn src_dir(&self) -> Result<PathBuf> {
         Ok(match self {
             Entry::Remote { name, .. } => cache_dir()?.join(name),
+
             Entry::Local { path, .. } => path.into(),
         })
     }
@@ -522,8 +439,11 @@ impl Entry {
     fn configure(&self) -> Result<()> {
         let setting = self.setting();
         let mut opts = setting.generator.option();
-        opts.push(format!("{}", self.src_dir()?.display()));
-
+        if let Some(ref relative_path) = setting.relative_path {
+            opts.push(format!("../{}", relative_path.display()));
+        } else {
+            opts.push("../llvm".into());
+        }
         opts.push(format!(
             "-DCMAKE_INSTALL_PREFIX={}",
             data_dir()?.join(self.prefix()?).display()
@@ -547,8 +467,10 @@ impl Entry {
                 setting.target.iter().join(";")
             ));
         }
-
-        // Other options
+        opts.push(format!(
+            "-DLLVM_ENABLE_PROJECTS={}",
+            setting.tools.join(";")
+        ));
         for (k, v) in &setting.option {
             opts.push(format!("-D{}={}", k, v));
         }

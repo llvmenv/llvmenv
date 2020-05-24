@@ -1,0 +1,4 @@
+[llvm-project]
+url    = "https://github.com/llvm/llvm-project"
+target = ["X86"]
+tools = ["clang", "clang-tools-extra"]
