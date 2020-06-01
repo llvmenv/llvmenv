@@ -32,7 +32,7 @@ tempfile= "3.1.0"
 thiserror = "1.0.16"
 toml = "0.5.6"
 url = "2.1.1"
-which = { version = "3.1.1", default-features = false }
+which = { version = "4.0.0", default-features = false }
 xz2 = "0.1.6"
 
 [dev-dependencies]
