@@ -1,5 +1,10 @@
 //! Get remote LLVM/Clang source
 
+use futures::{
+    executor::{block_on_stream, BlockingStream},
+    Stream,
+};
+use indicatif::{ProgressBar, ProgressStyle};
 use log::*;
 use std::{fs, io, path::*, process::Command};
 use tempfile::TempDir;
@@ -174,17 +179,10 @@ impl Resource {
             }
             Resource::Tar { url } => {
                 info!("Download Tar file: {}", url);
-                let req = reqwest::blocking::get(url)?;
-                let status = req.status();
-                if !status.is_success() {
-                    return Err(Error::HttpError {
-                        url: url.into(),
-                        status,
-                    });
-                }
                 // This will be large, but at most ~100MB
-                let bytes = req.bytes()?;
-                let xz_buf = xz2::read::XzDecoder::new(bytes.as_ref());
+                let mut rt = tokio::runtime::Runtime::new()?;
+                let mut bytes = rt.block_on(download(url))?;
+                let xz_buf = xz2::read::XzDecoder::new(&mut bytes);
                 let mut tar_buf = tar::Archive::new(xz_buf);
                 let entries = tar_buf
                     .entries()
@@ -222,6 +220,70 @@ impl Resource {
             Resource::Tar { .. } => {}
         }
         Ok(())
+    }
+}
+
+struct Download<T> {
+    stream: T,
+    bytes: Option<bytes::Bytes>,
+    bar: ProgressBar,
+}
+
+impl<T> Drop for Download<T> {
+    fn drop(&mut self) {
+        self.bar.finish()
+    }
+}
+
+async fn download(
+    url: &str,
+) -> Result<Download<BlockingStream<impl Stream<Item = reqwest::Result<bytes::Bytes>>>>> {
+    let req = reqwest::get(url).await?;
+    let status = req.status();
+    if !status.is_success() {
+        return Err(Error::HttpError {
+            url: url.into(),
+            status,
+        });
+    }
+    let content_length = req.headers()[reqwest::header::CONTENT_LENGTH]
+        .to_str()
+        .unwrap()
+        .parse()?;
+    let bar = ProgressBar::new(content_length)
+        .with_style(ProgressStyle::default_bar()
+            .template("{spinner:.green} [{elapsed_precise}] [{bar:38.cyan/blue}] {bytes}/{total_bytes} ({eta}) [{bytes_per_sec}]")
+            .progress_chars("#>-"));
+
+    Ok(Download {
+        stream: block_on_stream(req.bytes_stream()),
+        bytes: None,
+        bar,
+    })
+}
+
+impl<T> io::Read for Download<T>
+where
+    T: Iterator<Item = reqwest::Result<bytes::Bytes>>,
+{
+    fn read(&mut self, mut buf: &mut [u8]) -> io::Result<usize> {
+        let mut bytes = if let Some(bytes) = self.bytes.take() {
+            bytes
+        } else {
+            match self.stream.next() {
+                Some(Ok(bytes)) => bytes,
+                Some(Err(err)) => return Err(io::Error::new(io::ErrorKind::Other, err)),
+                None => return Ok(0),
+            }
+        };
+        if bytes.len() > buf.len() {
+            self.bytes = Some(bytes.split_off(buf.len()));
+        } else {
+            buf = &mut buf[..bytes.len()];
+        }
+        buf.copy_from_slice(&bytes);
+        self.bar.inc(bytes.len() as u64);
+        return Ok(bytes.len());
     }
 }
 
