@@ -36,4 +36,4 @@ which = { version = "3.1.1", default-features = false }
 xz2 = "0.1.6"
 
 [dev-dependencies]
-paste = "0.1.12"
+paste = "1.0.2"
