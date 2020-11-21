@@ -45,6 +45,18 @@ pub enum Error {
     },
 
     #[error(transparent)]
+    IoError {
+        #[from]
+        source: io::Error,
+    },
+
+    #[error(transparent)]
+    ParseIntError {
+        #[from]
+        source: std::num::ParseIntError,
+    },
+
+    #[error(transparent)]
     ReqwestError {
         #[from]
         source: reqwest::Error,
