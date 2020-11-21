@@ -195,7 +195,7 @@ impl Tool {
         match self.relative_path {
             Some(ref rel_path) => rel_path.to_string(),
             None => match self.name.as_str() {
-                "clang" | "lld" | "lldb" | "polly" => format!("tools/{}", self.name),
+                "clang" | "lld" | "lldb" | "polly" | "flang" => format!("tools/{}", self.name),
                 "clang-tools-extra" => "tools/clang/tools/clang-tools-extra".into(),
                 "compiler-rt" | "libcxx" | "libcxxabi" | "libunwind" | "openmp" => {
                     format!("projects/{}", self.name)
@@ -376,6 +376,12 @@ impl Entry {
             "openmp",
             &format!("{}/openmp-{}.src.tar.xz", base_url, version),
         ));
+        if (major, minor, patch) >= (11, 0, 0) {
+            setting.tools.push(Tool::new(
+                "flang",
+                &format!("{}/flang-{}.src.tar.xz", base_url, version),
+            ));
+        }
         Entry::parse_setting(&version, setting).unwrap()
     }
 
