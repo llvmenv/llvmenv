@@ -13,7 +13,7 @@ readme        = "README.md"
 categories    = []
 
 [dependencies]
-bytes = "0.5"
+bytes = "0.6"
 dirs = "3.0.1"
 fs_extra = "1.2.0"
 futures = "0.3.8"
