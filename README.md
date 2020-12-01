@@ -1,3 +1,5 @@
+:sos: This project is not active due to the absense of active maintainers. If you wish to participate, see [#72](https://github.com/llvmenv/llvmenv/issues/72).
+
 llvmenv
 =========
 
