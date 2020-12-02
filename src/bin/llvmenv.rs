@@ -192,18 +192,18 @@ fn main() -> error::Result<()> {
             } else {
                 build::seek_build()?
             };
-            let (ma, mi, pa) = build.version()?;
+            let version = build.version()?;
             if !(major || minor || patch) {
-                println!("{}.{}.{}", ma, mi, pa);
+                println!("{}.{}.{}", version.major, version.minor, version.patch);
             } else {
                 if major {
-                    print!("{}", ma);
+                    print!("{}", version.major);
                 }
                 if minor {
-                    print!("{}", mi);
+                    print!("{}", version.minor);
                 }
                 if patch {
-                    print!("{}", pa);
+                    print!("{}", version.patch);
                 }
                 println!();
             }
