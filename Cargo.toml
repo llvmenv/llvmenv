@@ -1,12 +1,13 @@
 [package]
 name = "llvmenv"
-version = "0.3.0"
-authors = ["Toshiki Teramura <toshiki.teramura@gmail.com>"]
+version = "0.3.1"
+authors = ["Toshiki Teramura <toshiki.teramura@gmail.com>",
+           "Alexander Ronald Altman <alexanderaltman@me.com>"]
 edition = "2018"
 
 description   = "Manage LLVM/Clang builds"
 documentation = "https://docs.rs/llvmenv"
-repository    = "https://github.com/termoshtt/llvmenv"
+repository    = "https://github.com/llvmenv/llvmenv"
 keywords      = ["env", "llvm", "clang"]
 license       = "MIT"
 readme        = "README.md"
