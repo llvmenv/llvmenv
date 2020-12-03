@@ -86,7 +86,7 @@ use crate::{config::*, error::*, resource::*};
 /// assert_eq!(CMakeGenerator::from_str("VisualStudio").unwrap(), CMakeGenerator::VisualStudio);
 /// assert!(CMakeGenerator::from_str("MySuperBuilder").is_err());
 /// ```
-#[derive(Deserialize, PartialEq, Debug)]
+#[derive(Deserialize, PartialEq, Debug, Clone)]
 pub enum CMakeGenerator {
     /// Use platform default generator (without -G option)
     Platform,
@@ -154,7 +154,7 @@ impl CMakeGenerator {
 }
 
 /// CMake build type
-#[derive(Deserialize, Debug, Clone, Copy)]
+#[derive(Deserialize, Debug, Clone, Copy, PartialEq)]
 pub enum BuildType {
     Debug,
     Release,
@@ -167,7 +167,7 @@ impl Default for BuildType {
 }
 
 /// LLVM Tools e.g. clang, compiler-rt, and so on.
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, PartialEq)]
 pub struct Tool {
     /// Name of tool (will be downloaded into `tools/{name}` by default)
     pub name: String,
@@ -213,7 +213,7 @@ impl Tool {
 /// Setting for both Remote and Local entries. TOML setting file will be decoded into this struct.
 ///
 ///
-#[derive(Deserialize, Debug, Default)]
+#[derive(Deserialize, Debug, Default, Clone, PartialEq)]
 pub struct EntrySetting {
     /// URL of remote LLVM resource, see also [resouce](../resource/index.html) module
     pub url: Option<String>,
@@ -245,7 +245,7 @@ pub struct EntrySetting {
 /// Describes how to compile LLVM/Clang
 ///
 /// See also [module level document](index.html).
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Entry {
     Remote {
         name: String,
@@ -627,6 +627,28 @@ mod tests {
             ..Default::default()
         };
         let _entry = Entry::parse_setting("duplicated", None, setting).unwrap();
+    }
+
+    #[test]
+    fn parse_with_version() {
+        let path = "~/.config/llvmenv";
+        let version = Version::new(10, 0, 0);
+        let setting = EntrySetting {
+            path: Some(path.into()),
+            ..Default::default()
+        };
+        let entry = Entry::parse_setting("path", Some(version.clone()), setting.clone()).unwrap();
+
+        assert_eq!(entry.version(), Some(&version));
+        assert_eq!(
+            entry,
+            Entry::Local {
+                name: "path".into(),
+                version: Some(version),
+                path: PathBuf::from(shellexpand::full(path).unwrap().to_string()),
+                setting,
+            }
+        )
     }
 
     macro_rules! checkout {

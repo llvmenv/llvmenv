@@ -106,7 +106,7 @@ impl Build {
 }
 
 fn parse_version(version: &str) -> Result<Version> {
-    let cap = Regex::new(r"(\d+).(\d).(\d)")
+    let cap = Regex::new(r"\d+\.\d+\.\d+")
         .unwrap()
         .captures(version)
         .ok_or_else(|| Error::invalid_version(version))?;
@@ -206,6 +206,13 @@ mod tests {
         let version = "clang version 10.0.0 \
             (https://github.com/llvm-mirror/clang 65acf43270ea2894dffa0d0b292b92402f80c8cb)";
         assert_eq!(parse_version(version)?, Version::new(10, 0, 0));
+
+        let version = "123+456y0";
+        assert!(matches!(parse_version(version).unwrap_err(), Error::InvalidVersion{..}));
+        assert_eq!(
+            parse_version("foo 123.456.789 bar")?,
+            Version::new(123, 456, 789)
+        );
 
         Ok(())
     }
