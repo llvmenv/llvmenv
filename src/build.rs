@@ -3,6 +3,7 @@
 use glob::glob;
 use log::*;
 use regex::Regex;
+use semver::Version;
 use std::{
     env, fs,
     io::{self, Read, Write},
@@ -96,7 +97,7 @@ impl Build {
     }
 
     /// Use `llvm-config --version` command
-    pub fn version(&self) -> Result<(u32, u32, u32)> {
+    pub fn version(&self) -> Result<Version> {
         let (stdout, _) = Command::new(self.prefix().join("bin/llvm-config"))
             .arg("--version")
             .check_output()?;
@@ -104,21 +105,12 @@ impl Build {
     }
 }
 
-fn parse_version(version: &str) -> Result<(u32, u32, u32)> {
-    let cap = Regex::new(r"(\d+).(\d).(\d)")
+fn parse_version(version: &str) -> Result<Version> {
+    let cap = Regex::new(r"\d+\.\d+\.\d+")
         .unwrap()
         .captures(version)
         .ok_or_else(|| Error::invalid_version(version))?;
-    let major = cap[1]
-        .parse()
-        .map_err(|_| Error::invalid_version(version))?;
-    let minor = cap[2]
-        .parse()
-        .map_err(|_| Error::invalid_version(version))?;
-    let patch = cap[3]
-        .parse()
-        .map_err(|_| Error::invalid_version(version))?;
-    Ok((major, minor, patch))
+    Version::parse(&cap[0]).map_err(|_| Error::invalid_version(version))
 }
 
 fn local_builds() -> Result<Vec<Build>> {
@@ -209,16 +201,19 @@ mod tests {
         // https://github.com/termoshtt/llvmenv/issues/36
         let version =
             "clang version 6.0.1-svn331815-1~exp1~20180510084719.80 (branches/release_60)";
-        let (major, minor, patch) = parse_version(version)?;
-        assert_eq!(major, 6);
-        assert_eq!(minor, 0);
-        assert_eq!(patch, 1);
+        assert_eq!(parse_version(version)?, Version::new(6, 0, 1));
+
         let version = "clang version 10.0.0 \
             (https://github.com/llvm-mirror/clang 65acf43270ea2894dffa0d0b292b92402f80c8cb)";
-        let (major, minor, patch) = parse_version(version)?;
-        assert_eq!(major, 10);
-        assert_eq!(minor, 0);
-        assert_eq!(patch, 0);
+        assert_eq!(parse_version(version)?, Version::new(10, 0, 0));
+
+        let version = "123+456y0";
+        assert!(matches!(parse_version(version).unwrap_err(), Error::InvalidVersion{..}));
+        assert_eq!(
+            parse_version("foo 123.456.789 bar")?,
+            Version::new(123, 456, 789)
+        );
+
         Ok(())
     }
 }

@@ -67,6 +67,7 @@
 
 use itertools::*;
 use log::{info, warn};
+use semver::{Version, VersionReq};
 use serde_derive::Deserialize;
 use std::{collections::HashMap, fs, path::PathBuf, process, str::FromStr};
 
@@ -85,7 +86,7 @@ use crate::{config::*, error::*, resource::*};
 /// assert_eq!(CMakeGenerator::from_str("VisualStudio").unwrap(), CMakeGenerator::VisualStudio);
 /// assert!(CMakeGenerator::from_str("MySuperBuilder").is_err());
 /// ```
-#[derive(Deserialize, PartialEq, Debug)]
+#[derive(Deserialize, PartialEq, Debug, Clone)]
 pub enum CMakeGenerator {
     /// Use platform default generator (without -G option)
     Platform,
@@ -153,7 +154,7 @@ impl CMakeGenerator {
 }
 
 /// CMake build type
-#[derive(Deserialize, Debug, Clone, Copy)]
+#[derive(Deserialize, Debug, Clone, Copy, PartialEq)]
 pub enum BuildType {
     Debug,
     Release,
@@ -166,7 +167,7 @@ impl Default for BuildType {
 }
 
 /// LLVM Tools e.g. clang, compiler-rt, and so on.
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, PartialEq)]
 pub struct Tool {
     /// Name of tool (will be downloaded into `tools/{name}` by default)
     pub name: String,
@@ -212,7 +213,7 @@ impl Tool {
 /// Setting for both Remote and Local entries. TOML setting file will be decoded into this struct.
 ///
 ///
-#[derive(Deserialize, Debug, Default)]
+#[derive(Deserialize, Debug, Default, Clone, PartialEq)]
 pub struct EntrySetting {
     /// URL of remote LLVM resource, see also [resouce](../resource/index.html) module
     pub url: Option<String>,
@@ -244,16 +245,18 @@ pub struct EntrySetting {
 /// Describes how to compile LLVM/Clang
 ///
 /// See also [module level document](index.html).
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Entry {
     Remote {
         name: String,
+        version: Option<Version>,
         url: String,
         tools: Vec<Tool>,
         setting: EntrySetting,
     },
     Local {
         name: String,
+        version: Option<Version>,
         path: PathBuf,
         setting: EntrySetting,
     },
@@ -263,7 +266,7 @@ fn load_entry_toml(toml_str: &str) -> Result<Vec<Entry>> {
     let entries: HashMap<String, EntrySetting> = toml::from_str(toml_str)?;
     entries
         .into_iter()
-        .map(|(name, setting)| Entry::parse_setting(&name, setting))
+        .map(|(name, setting)| Entry::parse_setting(&name, Version::parse(&name).ok(), setting))
         .collect()
 }
 
@@ -304,6 +307,14 @@ pub fn load_entry(name: &str) -> Result<Entry> {
         if entry.name() == name {
             return Ok(entry);
         }
+
+        if let Some(version) = entry.version() {
+            if let Some(req) = VersionReq::parse(name).ok() {
+                if req.matches(version) {
+                    return Ok(entry);
+                }
+            }
+        }
     }
     Err(Error::InvalidEntry {
         message: "Entry not found".into(),
@@ -311,13 +322,18 @@ pub fn load_entry(name: &str) -> Result<Entry> {
     })
 }
 
+lazy_static::lazy_static! {
+    static ref LLVM_8_0_1: Version = Version::new(8, 0, 1);
+    static ref LLVM_9_0_0: Version = Version::new(9, 0, 0);
+}
+
 impl Entry {
     /// Entry for official LLVM release
-    pub fn official(major: u32, minor: u32, patch: u32) -> Self {
-        let version = format!("{}.{}.{}", major, minor, patch);
+    pub fn official(major: u64, minor: u64, patch: u64) -> Self {
+        let version = Version::new(major, minor, patch);
         let mut setting = EntrySetting::default();
 
-        let base_url = if (major, minor, patch) <= (9, 0, 0) && (major, minor, patch) != (8, 0, 1) {
+        let base_url = if version <= *LLVM_9_0_0 && version != *LLVM_8_0_1 {
             format!("http://releases.llvm.org/{}", version)
         } else {
             format!(
@@ -332,7 +348,7 @@ impl Entry {
             &format!(
                 "{}/{}-{}.src.tar.xz",
                 base_url,
-                if (major, minor, patch) >= (9, 0, 1) {
+                if version > *LLVM_9_0_0 {
                     "clang"
                 } else {
                     "cfe"
@@ -376,10 +392,11 @@ impl Entry {
             "openmp",
             &format!("{}/openmp-{}.src.tar.xz", base_url, version),
         ));
-        Entry::parse_setting(&version, setting).unwrap()
+        let name = version.to_string();
+        Entry::parse_setting(&name, Some(version), setting).unwrap()
     }
 
-    fn parse_setting(name: &str, setting: EntrySetting) -> Result<Self> {
+    fn parse_setting(name: &str, version: Option<Version>, setting: EntrySetting) -> Result<Self> {
         if setting.path.is_some() && setting.url.is_some() {
             return Err(Error::InvalidEntry {
                 name: name.into(),
@@ -392,6 +409,7 @@ impl Entry {
             }
             return Ok(Entry::Local {
                 name: name.into(),
+                version,
                 path: PathBuf::from(shellexpand::full(&path).unwrap().to_string()),
                 setting,
             });
@@ -399,6 +417,7 @@ impl Entry {
         if let Some(url) = &setting.url {
             return Ok(Entry::Remote {
                 name: name.into(),
+                version,
                 url: url.clone(),
                 tools: setting.tools.clone(),
                 setting,
@@ -472,6 +491,13 @@ impl Entry {
         match self {
             Entry::Remote { name, .. } => name,
             Entry::Local { name, .. } => name,
+        }
+    }
+
+    pub fn version(&self) -> Option<&Version> {
+        match self {
+            Entry::Remote { version, .. } => version.as_ref(),
+            Entry::Local { version, .. } => version.as_ref(),
         }
     }
 
@@ -573,7 +599,7 @@ mod tests {
             url: Some("http://llvm.org/svn/llvm-project/llvm/trunk".into()),
             ..Default::default()
         };
-        let _entry = Entry::parse_setting("url", setting).unwrap();
+        let _entry = Entry::parse_setting("url", None, setting).unwrap();
     }
 
     #[test]
@@ -582,14 +608,14 @@ mod tests {
             path: Some("~/.config/llvmenv".into()),
             ..Default::default()
         };
-        let _entry = Entry::parse_setting("path", setting).unwrap();
+        let _entry = Entry::parse_setting("path", None, setting).unwrap();
     }
 
     #[should_panic]
     #[test]
     fn parse_no_entry() {
         let setting = EntrySetting::default();
-        let _entry = Entry::parse_setting("no_entry", setting).unwrap();
+        let _entry = Entry::parse_setting("no_entry", None, setting).unwrap();
     }
 
     #[should_panic]
@@ -600,7 +626,29 @@ mod tests {
             path: Some("~/.config/llvmenv".into()),
             ..Default::default()
         };
-        let _entry = Entry::parse_setting("duplicated", setting).unwrap();
+        let _entry = Entry::parse_setting("duplicated", None, setting).unwrap();
+    }
+
+    #[test]
+    fn parse_with_version() {
+        let path = "~/.config/llvmenv";
+        let version = Version::new(10, 0, 0);
+        let setting = EntrySetting {
+            path: Some(path.into()),
+            ..Default::default()
+        };
+        let entry = Entry::parse_setting("path", Some(version.clone()), setting.clone()).unwrap();
+
+        assert_eq!(entry.version(), Some(&version));
+        assert_eq!(
+            entry,
+            Entry::Local {
+                name: "path".into(),
+                version: Some(version),
+                path: PathBuf::from(shellexpand::full(path).unwrap().to_string()),
+                setting,
+            }
+        )
     }
 
     macro_rules! checkout {
