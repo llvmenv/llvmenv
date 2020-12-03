@@ -11,7 +11,7 @@ Manage multiple LLVM/Clang build
 Install
 -------
 0. Install cmake, builder (make/ninja), and C++ compiler (g++/clang++)
-1. Install Rust using [rustup](https://github.com/rust-lang-nursery/rustup.rs)
+1. Install Rust using [rustup](https://github.com/rust-lang-nursery/rustup.rs) or any other method.  The minimum supported Rust version is currently **1.48.0**.
 2. `cargo install llvmenv`
 
 zsh integration
