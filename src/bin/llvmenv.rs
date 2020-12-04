@@ -108,10 +108,12 @@ fn main() -> error::Result<()> {
         ConfigBuilder::new().set_time_to_local(true).build(),
         TerminalMode::Mixed,
     )
-    .or(SimpleLogger::init(
-        LevelFilter::Info,
-        ConfigBuilder::new().set_time_to_local(true).build(),
-    ))
+    .or_else(|_| {
+        SimpleLogger::init(
+            LevelFilter::Info,
+            ConfigBuilder::new().set_time_to_local(true).build(),
+        )
+    })
     .unwrap();
 
     let opt = LLVMEnv::from_args();

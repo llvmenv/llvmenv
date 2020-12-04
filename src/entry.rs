@@ -309,7 +309,7 @@ pub fn load_entry(name: &str) -> Result<Entry> {
         }
 
         if let Some(version) = entry.version() {
-            if let Some(req) = VersionReq::parse(name).ok() {
+            if let Ok(req) = VersionReq::parse(name) {
                 if req.matches(version) {
                     return Ok(entry);
                 }
