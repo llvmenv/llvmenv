@@ -1,7 +1,12 @@
-use log::info;
 use std::fs;
 use std::io::Write;
+use std::os::unix::fs::symlink;
 use std::path::PathBuf;
+use std::process::Command;
+
+use log::info;
+use semver::Version;
+use itertools::Itertools;
 
 use crate::error::*;
 
@@ -38,9 +43,8 @@ pub fn data_dir() -> Result<PathBuf> {
     Ok(path)
 }
 
-#[cfg(target_os = "macos")]
 pub fn homebrew_dir() -> Option<PathBuf> {
-    std::process::Command::new("brew")
+    Command::new("brew")
         .arg("--prefix")
         .check_output()
         .ok()
@@ -53,12 +57,7 @@ pub fn homebrew_dir() -> Option<PathBuf> {
         })
 }
 
-#[cfg(target_os = "macos")]
 pub fn append_homebrew_llvm<P: AsRef<std::path::Path>>(dir: P, out: &mut dyn Write) -> Result<()> {
-    use semver::Version;
-    use std::os::unix::fs::symlink;
-    use std::process::Command;
-
     for entry in fs::read_dir(dir)? {
         let entry = entry?;
         let path = entry.path();
@@ -74,7 +73,7 @@ pub fn append_homebrew_llvm<P: AsRef<std::path::Path>>(dir: P, out: &mut dyn Wri
                 .arg("--version")
                 .check_output()?;
             let version = Version::parse(&stdout).map_err(|_| Error::invalid_version(&stdout))?;
-            let name = format!("homebrew-llvm{}", version.major);
+            let name = format!("homebrew-{}", file_name.split('@').join(""));
 
             info!("found {} @ {}", name, path.display());
 
@@ -102,14 +101,12 @@ path = "{path}"
 }
 
 /// Initialize configure file
-pub fn init_config(force: bool) -> Result<()> {
-    let dir = config_dir()?;
-    let entry = dir.join(ENTRY_TOML);
+pub fn init_config(force: bool) -> Result<()> {    
+    let entry = config_dir()?.join(ENTRY_TOML);
     if force || !entry.exists() {
         info!("Create default entry setting: {}", entry.display());
         let mut f = fs::File::create(&entry).with(&entry)?;
         f.write(LLVM_MIRROR.as_bytes()).with(&entry)?;
-        #[cfg(target_os = "macos")]
         if let Some(dir) = homebrew_dir() {
             append_homebrew_llvm(dir, &mut f)?;
         }
