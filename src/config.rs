@@ -1,12 +1,8 @@
 use std::fs;
 use std::io::Write;
-use std::os::unix::fs::symlink;
 use std::path::PathBuf;
-use std::process::Command;
 
 use log::info;
-use semver::Version;
-use itertools::Itertools;
 
 use crate::error::*;
 
@@ -43,72 +39,92 @@ pub fn data_dir() -> Result<PathBuf> {
     Ok(path)
 }
 
-pub fn homebrew_dir() -> Option<PathBuf> {
-    Command::new("brew")
-        .arg("--prefix")
-        .check_output()
-        .ok()
-        .map(|(stdout, _)| {
-            let path = PathBuf::from(stdout.trim()).join("opt");
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+mod homebrew {
+    use std::fs;
+    use std::io::Write;
+    use std::path::PathBuf;
+    use std::process::Command;
 
-            info!("found homebrew @ {}", path.display());
+    use itertools::Itertools;
+    use log::info;
+    use semver::Version;
 
-            path
-        })
-}
+    use crate::config::data_dir;
+    use crate::error::{CommandExt, Error, Result};
 
-pub fn append_homebrew_llvm<P: AsRef<std::path::Path>>(dir: P, out: &mut dyn Write) -> Result<()> {
-    for entry in fs::read_dir(dir)? {
-        let entry = entry?;
-        let path = entry.path();
-        if !path.is_dir() {
-            continue;
-        }
+    pub fn dir() -> Option<PathBuf> {
+        Command::new("brew")
+            .arg("--prefix")
+            .check_output()
+            .ok()
+            .map(|(stdout, _)| {
+                let path = PathBuf::from(stdout.trim()).join("opt");
 
-        let file_name = entry.file_name();
-        let file_name = file_name.to_string_lossy();
+                info!("found homebrew @ {}", path.display());
 
-        if file_name == "llvm" || file_name.starts_with("llvm@") {
-            let (stdout, _) = Command::new(path.join("bin/llvm-config"))
-                .arg("--version")
-                .check_output()?;
-            let version = Version::parse(&stdout).map_err(|_| Error::invalid_version(&stdout))?;
-            let name = format!("homebrew-{}", file_name.split('@').join(""));
+                path
+            })
+    }
 
-            info!("found {} @ {}", name, path.display());
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    pub fn append_llvm<P: AsRef<std::path::Path>>(dir: P, out: &mut dyn Write) -> Result<()> {
+        use std::os::unix::fs::symlink;
 
-            let target = data_dir()?.join(&name);
-            if !target.exists() {
-                symlink(&path, &target)?;
+        for entry in fs::read_dir(dir)? {
+            let entry = entry?;
+            let path = entry.path();
+            if !path.is_dir() {
+                continue;
             }
 
-            write!(
-                out,
-                r#"
+            let file_name = entry.file_name();
+            let file_name = file_name.to_string_lossy();
+
+            if file_name == "llvm" || file_name.starts_with("llvm@") {
+                let (stdout, _) = Command::new(path.join("bin/llvm-config"))
+                    .arg("--version")
+                    .check_output()?;
+                let version =
+                    Version::parse(&stdout).map_err(|_| Error::invalid_version(&stdout))?;
+                let name = format!("homebrew-{}", file_name.split('@').join(""));
+
+                info!("found {} @ {}", name, path.display());
+
+                let target = data_dir()?.join(&name);
+                if !target.exists() {
+                    symlink(&path, &target)?;
+                }
+
+                write!(
+                    out,
+                    r#"
 [{name}]
 name = "{name}"
 version = "{version}"
 path = "{path}"
 "#,
-                name = name,
-                version = version,
-                path = path.display(),
-            )?;
+                    name = name,
+                    version = version,
+                    path = path.display(),
+                )?;
+            }
         }
-    }
 
-    Ok(())
+        Ok(())
+    }
 }
 
 /// Initialize configure file
-pub fn init_config(force: bool) -> Result<()> {    
+pub fn init_config(force: bool) -> Result<()> {
     let entry = config_dir()?.join(ENTRY_TOML);
     if force || !entry.exists() {
         info!("Create default entry setting: {}", entry.display());
         let mut f = fs::File::create(&entry).with(&entry)?;
         f.write(LLVM_MIRROR.as_bytes()).with(&entry)?;
-        if let Some(dir) = homebrew_dir() {
-            append_homebrew_llvm(dir, &mut f)?;
+        #[cfg(any(target_os = "linux", target_os = "macos"))]
+        if let Some(dir) = homebrew::dir() {
+            homebrew::append_llvm(dir, &mut f)?;
         }
         Ok(())
     } else {
