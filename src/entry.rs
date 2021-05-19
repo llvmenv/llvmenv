@@ -158,11 +158,29 @@ impl CMakeGenerator {
 pub enum BuildType {
     Debug,
     Release,
+    RelWithDebInfo,
+    MinSizeRel,
 }
 
 impl Default for BuildType {
     fn default() -> Self {
         BuildType::Release
+    }
+}
+
+impl FromStr for BuildType {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        match s.to_ascii_lowercase().as_str() {
+            "debug" => Ok(BuildType::Debug),
+            "release" => Ok(BuildType::Release),
+            "relwithdebinfo" => Ok(BuildType::RelWithDebInfo),
+            "minsizerel" => Ok(BuildType::MinSizeRel),
+            _ => Err(Error::UnsupportedBuildType {
+                build_type: s.to_string(),
+            }),
+        }
     }
 }
 
@@ -448,6 +466,11 @@ impl Entry {
     pub fn set_builder(&mut self, generator: &str) -> Result<()> {
         let generator = CMakeGenerator::from_str(generator)?;
         self.setting_mut().generator = generator;
+        Ok(())
+    }
+
+    pub fn set_build_type(&mut self, build_type: BuildType) -> Result<()> {
+        self.setting_mut().build_type = build_type;
         Ok(())
     }
 
