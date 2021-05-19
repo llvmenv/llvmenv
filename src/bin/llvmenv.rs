@@ -45,6 +45,12 @@ enum LLVMEnv {
         discard: bool,
         #[structopt(short = "j", long = "nproc")]
         nproc: Option<usize>,
+        #[structopt(
+            short = "t",
+            long = "build-type",
+            help = "Overwrite cmake build type (Debug, Release, RelWithDebInfo, or MinSizeRel)"
+        )]
+        build_type: Option<entry::BuildType>,
     },
 
     #[structopt(name = "current", about = "Show the name of current build")]
@@ -144,11 +150,15 @@ fn main() -> error::Result<()> {
             discard,
             builder,
             nproc,
+            build_type,
         } => {
             let mut entry = entry::load_entry(&name)?;
             let nproc = nproc.unwrap_or_else(num_cpus::get);
             if let Some(builder) = builder {
                 entry.set_builder(&builder)?;
+            }
+            if let Some(build_type) = build_type {
+                entry.set_build_type(build_type)?;
             }
             if discard {
                 entry.clean_cache_dir().unwrap();

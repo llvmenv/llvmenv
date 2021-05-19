@@ -20,6 +20,9 @@ pub enum Error {
     #[error("Unsupported cmake generator: {generator}")]
     UnsupportedGenerator { generator: String },
 
+    #[error("Unsupported cmake build type: {build_type}")]
+    UnsupportedBuildType { build_type: String },
+
     #[error("Configure file already exists: {path}")]
     ConfigureAlreadyExists { path: PathBuf },
 
