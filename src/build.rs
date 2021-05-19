@@ -208,7 +208,10 @@ mod tests {
         assert_eq!(parse_version(version)?, Version::new(10, 0, 0));
 
         let version = "123+456y0";
-        assert!(matches!(parse_version(version).unwrap_err(), Error::InvalidVersion{..}));
+        assert!(matches!(
+            parse_version(version).unwrap_err(),
+            Error::InvalidVersion { .. }
+        ));
         assert_eq!(
             parse_version("foo 123.456.789 bar")?,
             Version::new(123, 456, 789)
