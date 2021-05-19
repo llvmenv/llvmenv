@@ -312,7 +312,7 @@ fn strip_branch_from_url(url_str: &str) -> Result<String> {
         url: url_str.into(),
     })?;
     url.set_fragment(None);
-    Ok(url.into_string())
+    Ok(url.into())
 }
 
 #[cfg(test)]
