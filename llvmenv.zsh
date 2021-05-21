@@ -1,7 +1,11 @@
 #!/usr/bin/zsh
 
 function llvmenv_remove_path() {
-  path_base=${XDG_DATA_HOME:-$HOME/.local/share/llvmenv}
+  if [[ `uname` == "Darwin" ]]; then
+    path_base=${LLVMENV_HOME:-$HOME/Library/Application Support/llvmenv}
+  else
+    path_base=${XDG_DATA_HOME:-$HOME/.local/share/llvmenv}
+  fi
   path=("${(@)path:#$path_base/*}")
 }
 
@@ -14,7 +18,7 @@ function llvmenv_append_path() {
 }
 
 function llvmenv_env_llvm_sys () {
-  export LLVM_SYS_$(llvmenv version --major --minor)_PREFIX=$(llvmenv prefix)
+  export LLVM_SYS_$(llvmenv version --major --minor)_PREFIX="$(llvmenv prefix)"
 }
 
 function llvmenv_update () {
