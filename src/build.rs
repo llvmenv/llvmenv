@@ -114,7 +114,7 @@ fn parse_version(version: &str) -> Result<Version> {
 }
 
 fn local_builds() -> Result<Vec<Build>> {
-    Ok(glob(&data_dir()?.join("*/bin").to_str().unwrap())
+    Ok(glob(data_dir()?.join("*/bin").to_str().unwrap())
         .unwrap()
         .filter_map(|path| {
             if let Ok(path) = path {
