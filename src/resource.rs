@@ -283,7 +283,7 @@ where
         }
         buf.copy_from_slice(&bytes);
         self.bar.inc(bytes.len() as u64);
-        return Ok(bytes.len());
+        Ok(bytes.len())
     }
 }
 
