@@ -43,3 +43,6 @@ xz2 = "0.1.6"
 
 [dev-dependencies]
 paste = "1.0.3"
+
+[package.metadata.release]
+dev-version = false
