@@ -180,7 +180,7 @@ impl Resource {
             Resource::Tar { url } => {
                 info!("Download Tar file: {}", url);
                 // This will be large, but at most ~100MB
-                let mut rt = tokio::runtime::Runtime::new()?;
+                let rt = tokio::runtime::Runtime::new()?;
                 let mut bytes = rt.block_on(download(url))?;
                 let xz_buf = xz2::read::XzDecoder::new(&mut bytes);
                 let mut tar_buf = tar::Archive::new(xz_buf);
@@ -283,7 +283,7 @@ where
         }
         buf.copy_from_slice(&bytes);
         self.bar.inc(bytes.len() as u64);
-        return Ok(bytes.len());
+        Ok(bytes.len())
     }
 }
 
@@ -312,7 +312,7 @@ fn strip_branch_from_url(url_str: &str) -> Result<String> {
         url: url_str.into(),
     })?;
     url.set_fragment(None);
-    Ok(url.into_string())
+    Ok(url.into())
 }
 
 #[cfg(test)]

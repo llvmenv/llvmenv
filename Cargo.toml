@@ -1,12 +1,13 @@
 [package]
 name = "llvmenv"
-version = "0.3.0"
-authors = ["Toshiki Teramura <toshiki.teramura@gmail.com>"]
+version = "0.3.2"
+authors = ["Toshiki Teramura <toshiki.teramura@gmail.com>",
+           "Alexander Ronald Altman <alexanderaltman@me.com>"]
 edition = "2018"
 
 description   = "Manage LLVM/Clang builds"
 documentation = "https://docs.rs/llvmenv"
-repository    = "https://github.com/termoshtt/llvmenv"
+repository    = "https://github.com/llvmenv/llvmenv"
 keywords      = ["env", "llvm", "clang"]
 license       = "MIT"
 readme        = "README.md"
@@ -20,19 +21,21 @@ futures = "0.3.8"
 glob = "0.3.0"
 indicatif = "0.15.0"
 itertools = "0.9.0"
+lazy_static = "1.4"
 log = "0.4.11"
 num_cpus = "1.13.0"
 regex = "1.4.2"
 reqwest = { version = "0.11.5", features = ["blocking", "stream"] }
+semver = "0.11"
 serde = "1.0.117"
 serde_derive = "1.0.117"
 shellexpand = "2.0.0"
 simplelog = "0.8.0"
-structopt = "0.3.20"
+structopt = "0.3.21"
 tar = "0.4.30"
 tempfile= "3.1.0"
 thiserror = "1.0.22"
-tokio = "0.2"
+tokio = { version = "1.12.0", features = ["rt-multi-thread"] }
 toml = "0.5.7"
 url = "2.2.0"
 which = { version = "4.0.2", default-features = false }
@@ -40,3 +43,6 @@ xz2 = "0.1.6"
 
 [dev-dependencies]
 paste = "1.0.3"
+
+[package.metadata.release]
+dev-version = false
