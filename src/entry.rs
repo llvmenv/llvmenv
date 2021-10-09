@@ -290,6 +290,8 @@ fn load_entry_toml(toml_str: &str) -> Result<Vec<Entry>> {
 
 pub fn official_releases() -> Vec<Entry> {
     vec![
+        Entry::official(13, 0, 0),
+        Entry::official(12, 0, 1),
         Entry::official(12, 0, 0),
         Entry::official(11, 1, 0),
         Entry::official(11, 0, 0),
@@ -688,6 +690,10 @@ mod tests {
         };
     }
 
+    checkout!(13, 0, 0);
+    checkout!(12, 0, 1);
+    checkout!(12, 0, 0);
+    checkout!(11, 1, 0);
     checkout!(11, 0, 0);
     checkout!(10, 0, 1);
     checkout!(10, 0, 0);
