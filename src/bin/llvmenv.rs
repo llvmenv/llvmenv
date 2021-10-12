@@ -17,7 +17,10 @@ use structopt::StructOpt;
 )]
 enum LLVMEnv {
     #[structopt(name = "init", about = "Initialize llvmenv")]
-    Init {},
+    Init {
+        #[structopt(short, long, help = "Force to reinitiailize llvmenv")]
+        force: bool,
+    },
 
     #[structopt(name = "builds", about = "List usable build")]
     Builds {},
@@ -111,15 +114,17 @@ fn main() -> error::Result<()> {
         ConfigBuilder::new().set_time_to_local(true).build(),
         TerminalMode::Mixed,
     )
-    .or(SimpleLogger::init(
-        LevelFilter::Info,
-        ConfigBuilder::new().set_time_to_local(true).build(),
-    ))
+    .or_else(|_| {
+        SimpleLogger::init(
+            LevelFilter::Info,
+            ConfigBuilder::new().set_time_to_local(true).build(),
+        )
+    })
     .unwrap();
 
     let opt = LLVMEnv::from_args();
     match opt {
-        LLVMEnv::Init {} => config::init_config()?,
+        LLVMEnv::Init { force } => config::init_config(force)?,
 
         LLVMEnv::Builds {} => {
             let builds = build::builds()?;
