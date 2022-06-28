@@ -94,10 +94,18 @@ pub enum CMakeGenerator {
     Makefile,
     /// Ninja generator
     Ninja,
-    /// Visual Studio 15 2017
+    /// latest Visual Studio
     VisualStudio,
-    /// Visual Studio 15 2017 Win64
+    /// latest Visual Studio
     VisualStudioWin64,
+    /// Visual Studio 15 2017
+    VisualStudio15,
+    /// Visual Studio 15 2017 Win64
+    VisualStudio15Win64,
+    /// Visual Studio 16 2019
+    VisualStudio16,
+    /// Visual Studio 16 2019 Win64
+    VisualStudio16Win64,
 }
 
 impl Default for CMakeGenerator {
@@ -109,10 +117,15 @@ impl Default for CMakeGenerator {
 impl FromStr for CMakeGenerator {
     type Err = Error;
     fn from_str(generator: &str) -> Result<Self> {
-        Ok(match generator.to_ascii_lowercase().as_str() {
+        Ok(match generator.trim_matches(char::is_whitespace).to_ascii_lowercase().as_str() {
             "makefile" => CMakeGenerator::Makefile,
             "ninja" => CMakeGenerator::Ninja,
             "visualstudio" | "vs" => CMakeGenerator::VisualStudio,
+            "visualstudio64" | "vs64" => CMakeGenerator::VisualStudioWin64,
+            "visualstudio15" | "vs15" => CMakeGenerator::VisualStudio15,
+            "visualstudio1564" | "vs1564" => CMakeGenerator::VisualStudio15Win64,
+            "visualstudio16" | "vs16" => CMakeGenerator::VisualStudio16,
+            "visualstudio1664" | "vs1664" => CMakeGenerator::VisualStudio16Win64,
             _ => {
                 return Err(Error::UnsupportedGenerator {
                     generator: generator.into(),
@@ -129,9 +142,15 @@ impl CMakeGenerator {
             CMakeGenerator::Platform => Vec::new(),
             CMakeGenerator::Makefile => vec!["-G", "Unix Makefiles"],
             CMakeGenerator::Ninja => vec!["-G", "Ninja"],
-            CMakeGenerator::VisualStudio => vec!["-G", "Visual Studio 15 2017"],
-            CMakeGenerator::VisualStudioWin64 => {
+            CMakeGenerator::VisualStudio => return CMakeGenerator::VisualStudio16.option(),
+            CMakeGenerator::VisualStudioWin64 => return CMakeGenerator::VisualStudio16Win64.option(),
+            CMakeGenerator::VisualStudio15 => vec!["-G", "Visual Studio 15 2017"],
+            CMakeGenerator::VisualStudio15Win64 => {
                 vec!["-G", "Visual Studio 15 2017 Win64", "-Thost=x64"]
+            }
+            CMakeGenerator::VisualStudio16 => vec!["-G", "Visual Studio 16 2019"],
+            CMakeGenerator::VisualStudio16Win64 => {
+                vec!["-G", "Visual Studio 16 2019 Win64", "-Thost=x64"]
             }
         }
         .into_iter()
@@ -141,12 +160,13 @@ impl CMakeGenerator {
 
     /// Option for cmake build mode (`cmake --build` command)
     pub fn build_option(&self, nproc: usize, build_type: BuildType) -> Vec<String> {
+        use CMakeGenerator::*;
         match self {
-            CMakeGenerator::VisualStudioWin64 | CMakeGenerator::VisualStudio => {
+            VisualStudioWin64 | VisualStudio | VisualStudio15Win64 | VisualStudio15 | VisualStudio16 | VisualStudio16Win64 => {
                 vec!["--config".into(), format!("{:?}", build_type)]
             }
-            CMakeGenerator::Platform => Vec::new(),
-            CMakeGenerator::Makefile | CMakeGenerator::Ninja => {
+            Platform => Vec::new(),
+            Makefile | Ninja => {
                 vec!["--".into(), "-j".into(), format!("{}", nproc)]
             }
         }
