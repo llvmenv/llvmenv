@@ -34,7 +34,7 @@ enum LLVMEnv {
         #[structopt(
             short = "G",
             long = "builder",
-            help = "Overwrite cmake generator setting"
+            help = "Overwrite cmake generator setting (Makefile, Ninja, VisualStudio##, VisualStudioWin64##) [use '##' to optionally specify version]"
         )]
         builder: Option<String>,
         #[structopt(
