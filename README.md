@@ -68,3 +68,10 @@ global/local prefix
 - `llvmenv prefix` returns the path of the current build (e.g. `$XDG_DATA_HOME/llvmenv/llvm-dev`, or `/usr` for system build).
 - `llvmenv global [name]` sets default build, and `llvmenv local [name]` sets directory-local build by creating `.llvmenv` text file.
 - You can confirm which `.llvmenv` sets the current prefix by `llvmenv prefix -v`.
+
+FQA
+=========
+
+How can I continue a build when I've got an error?
+
+The builds are placed under `$XDG_DATA_HOME/llvmenv` (usually `$HOME/.local/share/llvmenv`). You can go to the folder `build` and run `make` to retry the build without recompiling from the start.
